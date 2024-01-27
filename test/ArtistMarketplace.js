@@ -12,7 +12,8 @@ describe("ArtistMarketplace", function () {
         contractCreator,
         artist1,
         artist2,
-        consumer
+        consumer,
+        consumer2
 
     beforeEach(async () => {
         let accounts = await ethers.getSigners()
@@ -80,58 +81,67 @@ describe("ArtistMarketplace", function () {
               .to.be.revertedWith('Only contract creator can update the listing price')
         })
 
-        /*it('should return the latest ListedToken by calling getLatestIdToListedToken', async function () {
+        it('should return the latest ListedToken by calling getLatestIdToListedToken', async function () {
+            const tokenURI = 'your_token_uri' // Replace with the desired token URI
+            const price = 100 // Replace with the desired token price
+
             // Perform some actions to add ListedTokens to idToListedToken mapping
-            // For example, mint tokens, list them, etc.
+            await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
         
             // Call the getLatestIdToListedToken function
-            const latestListedToken = await yourContract.getLatestIdToListedToken();
+            const latestListedToken = await artistContract.getLatestIdToListedToken();
         
             // Assert that the returned ListedToken is not null or undefined
-            expect(latestListedToken).to.not.be.null;
+            expect(latestListedToken.currentlyListed).to.equal(true);
         
             // Add more specific assertions based on your contract logic and data structure
             // For example, check properties of the returned ListedToken object
             // expect(latestListedToken.someProperty).to.equal(someExpectedValue);
-        })*/
+        })
 
-        /*it('should return the ListedToken for a specific tokenId by calling getListedForTokenId', async function () {
+        it('should return the ListedToken for a specific tokenId by calling getListedForTokenId', async function () {
+            const tokenURI = 'your_token_uri' // Replace with the desired token URI
+            const price = 100 // Replace with the desired token price
             const tokenId = 1; // Replace with the desired tokenId
         
             // Perform some actions to add a ListedToken to the idToListedToken mapping for the given tokenId
-            // For example, mint a token, list it, etc.
+            await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
         
             // Call the getListedForTokenId function
-            const listedToken = await yourContract.getListedForTokenId(tokenId);
+            const listedToken = await artistContract.getListedForTokenId(tokenId);
         
             // Assert that the returned ListedToken is not null or undefined
-            expect(listedToken).to.not.be.null;
+            expect(listedToken.currentlyListed).to.equal(true);
         
             // Add more specific assertions based on your contract logic and data structure
             // For example, check properties of the returned ListedToken object
             // expect(listedToken.someProperty).to.equal(someExpectedValue);
-        })*/
+        })
         
-        /*it('should return null for a tokenId that has not been listed', async function () {
+        it('should return false for a tokenId that has not been listed', async function () {
             const tokenId = 2; // Replace with a tokenId that has not been listed
         
             // Call the getListedForTokenId function
-            const listedToken = await yourContract.getListedForTokenId(tokenId);
-        
-            // Assert that the returned ListedToken is null
-            expect(listedToken).to.be.null;
-        })*/
+            const listedToken = await artistContract.getListedForTokenId(tokenId);
+            
+            // Assert that the returned ListedToken is not listed
+            expect(listedToken.currentlyListed).to.equal(false)
+        })
 
-        /*it('should return the current token ID by calling getCurrentToken', async function () {
+        it('should return the current token ID by calling getCurrentToken', async function () {
+            const tokenURI = 'your_token_uri' // Replace with the desired token URI
+            const price = 100 // Replace with the desired token price
+
             // Perform some actions to mint tokens, if necessary
+            await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
         
             // Call the getCurrentToken function
-            const currentTokenId = await yourContract.getCurrentToken();
+            const currentTokenId = await artistContract.getCurrentToken();
         
             // Assert that the returned current token ID is as expected
             // For example, you might expect it to be 1 if it's the first token minted
-            expect(currentTokenId).to.equal(/* Expected current token ID )
-        })*/
+            expect(currentTokenId).to.equal(1)
+        })
     })
 
     describe('Main Functions', () => {
@@ -145,9 +155,6 @@ describe("ArtistMarketplace", function () {
                 it('should create a new token with the specified URI and price when called by a whitelisted address', async function () {
                     const tokenURI = 'your_token_uri' // Replace with the desired token URI
                     const price = 100 // Replace with the desired token price
-                
-                    // Add artist to the whitelist (redundant)
-                    //await artistContract.addToWhtList(artist1.address);
                 
                     // Call the createToken function as a whitelisted address
                     await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
@@ -170,7 +177,7 @@ describe("ArtistMarketplace", function () {
                beforeEach(async () => {
                     const ArtistContract = await ethers.getContractFactory('ArtistMarketplace')
                     artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
-               })
+                })
     
                 it('should revert if called by a non-whitelisted address', async function () {
                     const tokenURI = 'your_token_uri' // Replace with the desired token URI
@@ -188,7 +195,7 @@ describe("ArtistMarketplace", function () {
                 beforeEach(async () => {
                     const ArtistContract = await ethers.getContractFactory('ArtistMarketplace')
                     artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
-               })
+                })
 
                 it('should create a ListedToken with the specified tokenId and price when called with the correct value', async function () {
                     const tokenId = 1; // Replace with the desired tokenId
@@ -207,11 +214,149 @@ describe("ArtistMarketplace", function () {
                     expect(listedToken.owner).to.equal(artistContract.address);
                     expect(listedToken.price).to.equal(price);
                     expect(listedToken.currentlyListed).to.equal(true);
-                  });
+                });
             })
 
             describe('Failure', async () => {
+                beforeEach(async () => {
+                    const ArtistContract = await ethers.getContractFactory('ArtistMarketplace')
+                    artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
+                })
 
+                it('should revert if called with the incorrect value', async function () {
+                    const tokenId = 2; // Replace with the desired tokenId
+                    const price = 100; // Replace with the desired token price
+                
+                    // Attempt to call createListedToken function with the incorrect value
+                    await expect(artistContract.connect(artist1).createToken(tokenId, price, { value: ethers.utils.parseEther('0.5') }))
+                      .to.be.revertedWith('Please send the correct price');
+                });
+            })
+        })
+
+        describe('getAllNFTs', async () => {
+            beforeEach(async () => {
+                const ArtistContract = await ethers.getContractFactory('ArtistMarketplace')
+                artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
+            })
+
+            it('should return an array of ListedToken with all NFTs in the marketplace', async function () {
+                const tokenURI = 'your_token_uri' // Replace with the desired token URI
+                const price = 100; // Replace with the desired token price
+
+                // Add two NFTs to the array
+                await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
+                await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
+            
+                // Call the getAllNFTs function
+                const allNFTs = await artistContract.getAllNFTs();
+            
+                // Assert that the returned array is not null or undefined
+                expect(allNFTs).to.not.be.null;
+            
+                // Add more specific assertions based on your contract logic and data structure
+                // For example, check the length of the returned array
+                // expect(allNFTs.length).to.equal(expectedLength);
+            
+                // Or check properties of the individual ListedToken objects in the array
+                // expect(allNFTs[0].someProperty).to.equal(someExpectedValue);
+            })
+        })
+
+        describe('getMyNFTs', async () => {
+            beforeEach(async () => {
+                const ArtistContract = await ethers.getContractFactory('ArtistMarketplace')
+                artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
+            })
+
+            it('should return an array of ListedToken owned or listed by the caller', async function () {
+                const tokenURI = 'your_token_uri' // Replace with the desired token URI
+                const price = 100; // Replace with the desired token price
+
+                // Perform some actions to add ListedTokens to idToListedToken mapping
+                await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
+
+                // Call the getMyNFTs function as the owner
+                const ownerNFTs = await artistContract.connect(artist1).getMyNFTs();
+                
+                // Assert that the returned array is not null or undefined
+                expect(ownerNFTs).to.not.be.null;
+            
+                // Add more specific assertions based on your contract logic and data structure
+                // For example, check the length of the returned array
+                // expect(ownerNFTs.length).to.equal(expectedLength);
+            
+                // Or check properties of the individual ListedToken objects in the array
+                // expect(ownerNFTs[0].someProperty).to.equal(someExpectedValue);
+            });
+            
+            it('should return an empty array for a user with no owned or listed NFTs', async function () {
+                // Call the getMyNFTs function as another user
+                const userNFTs = await artistContract.connect(consumer).getMyNFTs();
+                
+                // Assert that the returned array is empty
+                expect(userNFTs.length).to.equal(0);
+            });
+        })
+
+        describe('executeSale', async () => {
+            describe('Success', async () => {
+                beforeEach(async () => {
+                    const ArtistContract = await ethers.getContractFactory('ArtistMarketplace')
+                    artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
+                })
+
+                it('should execute the sale and transfer ownership when called with the correct value', async function () {
+                    const tokenId = 1; // Replace with the desired tokenId
+                
+                    // Mint a token and list it for sale
+                    await artistContract.connect(artist1).createToken('your_token_uri', toWei(100), { value: ethers.utils.parseEther('0.01') });
+
+                    // Call the executeSale function as the buyer with the correct value
+                    await expect(artistContract.connect(consumer).executeSale(tokenId, { value: toWei(100) }))
+                      .to.emit(artistContract, 'Transfer')
+                      .withArgs(artistContract.address, consumer.address, tokenId)
+                      .and.to.emit(artistContract, 'Approval')
+                      .withArgs(consumer.address, artistContract.address, tokenId);
+                
+                    // Check if ownership is transferred
+                    const ownerAfterSale = await artistContract.ownerOf(tokenId);
+                    expect(ownerAfterSale).to.equal(consumer.address);
+                
+                    // Check if the ListedToken is updated
+                    const updatedListedToken = await artistContract.getListedForTokenId(tokenId);
+                    expect(updatedListedToken.seller).to.equal(consumer.address);
+                    expect(updatedListedToken.currentlyListed).to.equal(true);
+                
+                    // Check if funds are transferred to the seller and contract creator
+                    const sellerBalanceAfterSale = await ethers.provider.getBalance(artist1.address);
+                    console.log('Artist Balance: ', fromWei(sellerBalanceAfterSale))
+                    const creatorBalanceAfterSale = await ethers.provider.getBalance(contractCreator.address); // Assuming contractCreator is the owner
+                    console.log('Contract Creator Balance: ', fromWei(creatorBalanceAfterSale))
+
+                    // Add more specific assertions based on your contract logic and data structure
+                    // For example, check if the balances have increased by the correct amounts
+                    // expect(sellerBalanceAfterSale).to.equal(sellerBalanceBeforeSale + expectedSellerBalanceIncrease);
+                    // expect(creatorBalanceAfterSale).to.equal(creatorBalanceBeforeSale + expectedCreatorBalanceIncrease);
+                })
+            })
+
+            describe('Failure', async () => {
+                beforeEach(async () => {
+                    const ArtistContract = await ethers.getContractFactory('ArtistMarketplace')
+                    artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
+                })
+
+                it('should revert if called with the incorrect value', async function () {
+                    const tokenId = 2; // Replace with the desired tokenId
+                
+                    // Mint a token and list it for sale
+                    await artistContract.connect(artist1).createToken('your_token_uri', 100, { value: ethers.utils.parseEther('0.01') });
+                
+                    // Attempt to call executeSale function with the incorrect value
+                    await expect(artistContract.connect(consumer).executeSale(tokenId, { value: 50 }))
+                        .to.be.revertedWith('Please submit the asking price in order to complete the purchase');
+                })
             })
         })
     })

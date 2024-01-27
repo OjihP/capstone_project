@@ -120,7 +120,7 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
     // Helps create the object of type ListedToken for the NFT and update the idToListedToken mapping
     function createListedToken(uint256 tokenId, uint256 price) private {
         // Make sure the sender sent enough ETH to pay for listing
-        require(msg.value == listPrice, "Hopefully sending the correct price");
+        require(msg.value == listPrice, "Please send the correct price");
         // Just sanity check
         require(price > 0, "Make sure the price isn't negative");
 

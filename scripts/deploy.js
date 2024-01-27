@@ -5,18 +5,37 @@
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
 const hre = require("hardhat");
+const fs = require("fs");
 
 async function main() {
-  const NAME = 'Dapp University'
-  const SYMBOL = 'DAPP'
-  const MAX_SUPPLY = '1000000'
+  const NAME = 'Soleplex'
+  const SYMBOL = 'PLEX'
+
+  let contractCreator,
+      artist1,
+      artist2,
+      consumer
+
+  let accounts = await ethers.getSigners()
+      contractCreator = accounts[0]
+      artist1 = accounts[1]
+      artist2 = accounts[2]
+      consumer = accounts[3]
+    
 
   // Deploy Token
-  const Token = await hre.ethers.getContractFactory('Token')
-  let token = await Token.deploy(NAME, SYMBOL, MAX_SUPPLY)
+  const ArtistContract = await hre.ethers.getContractFactory('ArtistMarketplace')
+  let artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
 
-  await token.deployed()
-  console.log(`Token deployed to: ${token.address}\n`)
+  await artistContract.deployed()
+  console.log(`ArtistMarketplace deployed to: ${artistContract.address}\n`)
+
+  const abiData = {
+    abi: JSON.parse(artistContract.interface.format('json'))
+  }
+
+  //This writes the ABI to ArtistContract.json
+  //fs.writeFileSync('./src/abis/ArtistContract.json', JSON.stringify(abiData, null, "\t"))
 }
 
 // We recommend this pattern to be able to use async/await everywhere
