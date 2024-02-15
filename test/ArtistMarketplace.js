@@ -128,6 +128,43 @@ describe("ArtistMarketplace", function () {
             expect(listedToken.currentlyListed).to.equal(false)
         })
 
+        it('should return the correct token URI', async function () {
+            const tokenId = 1;
+            const tokenURI = 'https://example.com/token/1';
+            const price = 100;
+            
+            // Set token URI
+            await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') });
+        
+            // Get token URI
+            const returnedTokenURI = await artistContract.getTokenURI(tokenId);
+            console.log(returnedTokenURI)
+            // Assert that the returned token URI matches the expected value
+            expect(returnedTokenURI).to.equal(tokenURI);
+          })
+
+        it("should return an array of token IDs", async function () {
+            const tokenURI = 'your_token_uri' // Replace with the desired token URI
+            const price = 100 // Replace with the desired token price
+        
+            // Perform some actions to add a ListedToken to the idToListedToken mapping for the given tokenId
+            await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
+            await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
+            await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
+        
+            // Check if the length of the returned array matches the expected length
+            const arrayLength = await artistContract.getTokenIdsFromListedToken()
+            console.log(arrayLength)
+            expect(arrayLength.length).to.equal(3);
+        
+            // You can add more specific assertions based on your use case
+            // For example, you can check if the token IDs are in the expected range
+            // or compare them with specific values from your deployed contract
+        
+            // Example: Check if the first token ID is greater than or equal to 0
+            //expect(TokenIdsFromListedToken[0]).to.be.at.least(0);
+          })
+
         it('should return the current token ID by calling getCurrentToken', async function () {
             const tokenURI = 'your_token_uri' // Replace with the desired token URI
             const price = 100 // Replace with the desired token price

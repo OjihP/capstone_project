@@ -1,5 +1,6 @@
 import { Navbar, Nav, Button, Container }  from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import DropdownButton from 'react-bootstrap/DropdownButton';
 import logo from '../logo.png';
 
 const Navigation = ({ web3Handler, account }) => {

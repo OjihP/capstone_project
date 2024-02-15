@@ -23,6 +23,7 @@ function App() {
   const [provider, setProvider] = useState(null)
   const [account, setAccount] = useState(null)
   const [artnft, setArtNFT] = useState(null)
+  const [signer, setSigner] = useState(null)
   const [balance, setBalance] = useState(0)
 
   const [isLoading, setIsLoading] = useState(true)
@@ -40,19 +41,16 @@ function App() {
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
     const account = ethers.utils.getAddress(accounts[0])
     setAccount(account)
-
-    //const signer = provider.getSigner()
-
+    
     // Fetch account balance
     let balance = await provider.getBalance(account)
     balance = ethers.utils.formatUnits(balance, 18)
     setBalance(balance)
-
+    
     //loadContract()
     setIsLoading(false)
+    
   }
-
-  /*const loadContract = async () => {}*/
 
   /*useEffect(() => {
     if (isLoading) {
@@ -62,12 +60,29 @@ function App() {
 
   return(
     <Container>
-           <Mint 
-            provider={provider} 
-            artnft={artnft} 
-            setIsLoading={setIsLoading} 
-            account={account} 
-          /> 
+           <HashRouter>
+              <Navigation web3Handler={web3Handler} account={account} />
+              <Routes>
+                <Route path="/" />
+                <Route path="/about" />
+                <Route path="/contact" />
+                <Route path="/donate" />
+                <Route path="/nftshop" element={
+                  <NFTShop 
+                    provider={provider}
+                    artnft={artnft}
+                  />} 
+                />
+                <Route path="/mint" element={
+                  <Mint 
+                    provider={provider}
+                    artnft={artnft} 
+                    account={account} 
+                    setIsLoading={setIsLoading}
+                  />} 
+                />
+              </Routes>
+            </HashRouter>
     </Container>
 
     
@@ -75,22 +90,4 @@ function App() {
   )
 }
 
-/*<HashRouter>
-              <Navigation web3Handler={web3Handler} account={account} />
-              <Routes>
-                <Route path="/" />
-                <Route path="/about" />
-                <Route path="/contact" />
-                <Route path="/donate" />
-                <Route path="/nft shop" />
-                <Route path="/mint" element={
-                  <Mint 
-                    provider={provider} 
-                    artnft={artnft} 
-                    setIsLoading={setIsLoading} 
-                    account={account} 
-                  />} 
-                />
-              </Routes>
-            </HashRouter>*/
 export default App;

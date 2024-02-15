@@ -5,9 +5,11 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/Counters.sol"; // Safe and secure implementation of a counter in solidity. Can help track # of items sold in a marketplace
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol"; // Helps store the token URI. The token URI is the URL in which the metatdata for the NFT is located
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ArtistMarketplace is ERC721URIStorage, Ownable {
+    using Strings for uint256;
 
     address payable contractCreator;
     address private artist;
@@ -43,6 +45,8 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
 
     // This mapping maps tokenId to token info and is helpful when retrieving details about a tokenId
     mapping(uint256 => ListedToken) private idToListedToken;
+    //
+    mapping(uint256 => string) private tokenURIs;
     // 
     mapping(address => bool) public whiteList;
 
@@ -85,6 +89,34 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         return idToListedToken[tokenId];
     }
 
+    function getTokenIdFromListedToken(uint256 tokenId) public view returns (uint256) {
+        return idToListedToken[tokenId].tokenId;
+    }
+
+    function getTokenURI(uint256 tokenId) public view returns (string memory) {
+        return tokenURIs[tokenId];
+    }
+
+    function getTokenIdsFromListedToken() public view returns (uint256[] memory) {
+        uint nftCount = _tokenIds.current();
+        uint256[] memory tokenIds = new uint256[](nftCount);
+        uint256 currentId;
+        uint256 currentIndex;
+   
+        for(uint i = 0; i < nftCount; i++)
+        {
+            currentId = i + 1;
+            tokenIds[currentIndex] = idToListedToken[currentId].tokenId;
+            currentIndex += 1;
+        }
+
+        return tokenIds;
+    }
+
+    function getTokenPriceFromListedToken(uint256 tokenId) public view returns (uint256) {
+        return idToListedToken[tokenId].price;
+    }
+
     function getCurrentToken() public view returns (uint256) {
         return _tokenIds.current();
     }
@@ -110,6 +142,9 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
 
         // Map the tokenId to the tokenURI (which is an IPFS URL with the NFT metadata)
         _setTokenURI(newTokenId, tokenURI);
+
+        // Set the tokenURI to the tokenId in the mapping
+         tokenURIs[newTokenId] = tokenURI;
 
         // Helper function to update Global variables and emit an event
         createListedToken(newTokenId, price);
