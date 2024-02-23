@@ -202,9 +202,20 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         return tokens;
     }
     
-    // Returns all the NFTs that the current user is owner or seller in
-    function getMyNFTs() public view returns (ListedToken[] memory) {
-        uint totalItemCount = _tokenIds.current();
+    // Returns all the tokenIds that the current user has
+    function getMyIds(address _owner) public view returns (uint256[] memory) {
+        uint256 ownerTokenCount = balanceOf(_owner);
+        uint256[] memory tokenIds = new uint256[](ownerTokenCount);
+        uint256 currentId;
+        uint256 currentIndex;
+   
+        for(uint i = 0; i < ownerTokenCount; i++)
+        {
+            currentId = i + 1;
+            tokenIds[currentIndex] = idToListedToken[currentId].tokenId;
+            currentIndex += 1;
+        }
+        /*uint totalItemCount = _tokenIds.current();
         uint itemCount = 0;
         uint currentIndex = 0;
         uint currentId;
@@ -226,7 +237,8 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
                 currentIndex += 1;
             }
         }
-        return items;
+        return items;*/
+        return tokenIds;
     }
 
     // the function that executes the sale on the marketplace
@@ -237,6 +249,7 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
 
         // update the details of the token
         idToListedToken[tokenId].currentlyListed = true; // extend the functionally...
+        idToListedToken[tokenId].owner = payable(msg.sender);
         idToListedToken[tokenId].seller = payable(msg.sender);
         _itemsSold.increment();
 

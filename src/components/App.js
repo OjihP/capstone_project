@@ -71,14 +71,13 @@ function App() {
                   <NFTShop 
                     provider={provider}
                     artnft={artnft}
+                    account={account}
                   />} 
                 />
                 <Route path="/mint" element={
                   <Mint 
                     provider={provider}
                     artnft={artnft} 
-                    account={account} 
-                    setIsLoading={setIsLoading}
                   />} 
                 />
               </Routes>

@@ -300,7 +300,7 @@ describe("ArtistMarketplace", function () {
             })
         })
 
-        describe('getMyNFTs', async () => {
+        describe('getMyIds', async () => {
             beforeEach(async () => {
                 const ArtistContract = await ethers.getContractFactory('ArtistMarketplace')
                 artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
@@ -308,16 +308,32 @@ describe("ArtistMarketplace", function () {
 
             it('should return an array of ListedToken owned or listed by the caller', async function () {
                 const tokenURI = 'your_token_uri' // Replace with the desired token URI
-                const price = 100; // Replace with the desired token price
+                const price = toWei(100); // Replace with the desired token price
+                const tokenId1 = 1
+                const tokenId2 = 2
+                const tokenId3 = 3
 
                 // Perform some actions to add ListedTokens to idToListedToken mapping
                 await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
+                await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
+                await artistContract.connect(artist1).createToken(tokenURI, price, { value: ethers.utils.parseEther('0.01') })
 
-                // Call the getMyNFTs function as the owner
-                const ownerNFTs = await artistContract.connect(artist1).getMyNFTs();
+                // Purchase created NFT as the consumer
+                await artistContract.connect(consumer).executeSale(tokenId1, { value: toWei(100) })
+                await artistContract.connect(consumer).executeSale(tokenId2, { value: toWei(100) })
+                await artistContract.connect(consumer).executeSale(tokenId3, { value: toWei(100) })
+
+                // Check consumer wallet for the NFT Id using function
+                const ownerIds = await artistContract.connect(consumer).getMyIds(consumer.address);
+
+                const listedId = await artistContract.getListedForTokenId(tokenId1)
+                console.log(listedId.toString())
                 
                 // Assert that the returned array is not null or undefined
-                expect(ownerNFTs).to.not.be.null;
+                expect(ownerIds).to.have.lengthOf(3); // Assuming the owner owns 3 tokens
+                expect(ownerIds.toString()).to.include(1);
+                expect(ownerIds.toString()).to.include(2);
+                expect(ownerIds.toString()).to.include(3);
             
                 // Add more specific assertions based on your contract logic and data structure
                 // For example, check the length of the returned array
@@ -329,7 +345,7 @@ describe("ArtistMarketplace", function () {
             
             it('should return an empty array for a user with no owned or listed NFTs', async function () {
                 // Call the getMyNFTs function as another user
-                const userNFTs = await artistContract.connect(consumer).getMyNFTs();
+                const userNFTs = await artistContract.connect(consumer).getMyIds(consumer.address);
                 
                 // Assert that the returned array is empty
                 expect(userNFTs.length).to.equal(0);
@@ -349,19 +365,30 @@ describe("ArtistMarketplace", function () {
                     // Mint a token and list it for sale
                     await artistContract.connect(artist1).createToken('your_token_uri', toWei(100), { value: ethers.utils.parseEther('0.01') });
 
+                    const listedToken = await artistContract.getListedForTokenId(tokenId);
+                    const ownerBeforeSale = await artistContract.ownerOf(tokenId);
+                        console.log('Owner before sale using ownerOf: ', ownerBeforeSale)
+                        console.log('Owner before sale in struct : ', listedToken.owner)
+                        console.log('Seller before sale: ', listedToken.seller)
+                        console.log('listedToken: ', listedToken)
+
                     // Call the executeSale function as the buyer with the correct value
                     await expect(artistContract.connect(consumer).executeSale(tokenId, { value: toWei(100) }))
                       .to.emit(artistContract, 'Transfer')
                       .withArgs(artistContract.address, consumer.address, tokenId)
                       .and.to.emit(artistContract, 'Approval')
-                      .withArgs(consumer.address, artistContract.address, tokenId);
+                      .withArgs(consumer.address, artistContract.address, tokenId)
                 
                     // Check if ownership is transferred
                     const ownerAfterSale = await artistContract.ownerOf(tokenId);
+                        console.log('Owner after sale using ownerOf: ', ownerAfterSale)
                     expect(ownerAfterSale).to.equal(consumer.address);
                 
                     // Check if the ListedToken is updated
                     const updatedListedToken = await artistContract.getListedForTokenId(tokenId);
+                        console.log('Owner after sale in struct : ', updatedListedToken.owner)
+                        console.log('Seller after sale: ', updatedListedToken.seller)
+                        console.log('updatedListedToken: ', updatedListedToken)
                     expect(updatedListedToken.seller).to.equal(consumer.address);
                     expect(updatedListedToken.currentlyListed).to.equal(true);
                 
