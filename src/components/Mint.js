@@ -5,15 +5,20 @@ import { ethers } from 'ethers';
 
 import axios from 'axios';
 
+// Import the NFTStorage class and File constructor from the 'nft.storage' package
+import { NFTStorage } from 'nft.storage'
+
+// Paste your NFT.Storage API key into the quotes:
+const API_KEY = `${process.env.REACT_APP_PINATA_API_KEY}`
+
 const toWei = (n) => ethers.utils.parseEther(n.toString())
 
 const FormData = require("form-data")
-const fetch = require("node-fetch")
-//const fs = require("fs")
+
+
 
 const Mint = ({ provider, artnft }) => {
-    const [image, setImage] = useState(null)
-    //const [URI, setURI] = useState('');
+    const [files, setFiles] = useState(null)
     const [price, setPrice] = useState(null)
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
@@ -25,7 +30,7 @@ const Mint = ({ provider, artnft }) => {
           .get(url, {
               headers: {
                   'pinata_api_key': `${process.env.REACT_APP_PINATA_API_KEY}`,
-                  'pinata_secret_api_key': `${process.env.REACT_APP_PINATA_API_SECRET}`
+                  'pinata_secret_api_key': `${process.env.REACT_APP_PINATA_API_SECRET}` 
               }
           })
           .then(function (response) {
@@ -36,107 +41,36 @@ const Mint = ({ provider, artnft }) => {
               //handle error here
           });
   };
-  
-  /*const uploadImage = async () => {
-    try {
-      const data = new FormData()
-      data.append("file", image)
 
-      const pinataMetaData =  JSON.stringify({name: name, description: description});
+    const mintHandler = async () => {
+      const formData = new FormData();
+      formData.append('file', files);
 
-      data.append("pinataMetadata", pinataMetaData);
+      const pinataMetadata = JSON.stringify({
+        name: files.name,
+        keyvalues: {
+          nftDescription: description
+        }
+      });
+      formData.append('pinataMetadata', pinataMetadata);
 
       const pinataOptions = JSON.stringify({
         cidVersion: 0,
       });
+      formData.append('pinataOptions', pinataOptions);
 
-      data.append('pinataOptions', pinataOptions);
-
-      const res = await axios.post(`https://api.pinata.cloud/pinning/pinFileToIPFS`, data, {
-        maxbodylength: "Infinity",
-        headers: {
-          'Content-Type': `multipart/form-data; boundary=${data._boundary}`,
-          'Authorization': `Bearer ${process.env.REACT_APP_PINATA_JWT_KEY}`
-        },
-      })
-      console.log("Metadata: ", data)
-      console.log("File uploaded, CID: ", res.data.IpfsHash)
-      setURI(`ipfs/${res.data.IpfsHash}`)
-      return `ipfs/${res.data.IpfsHash}`
-
-
-
-
-    } catch (error) {
-      console.log(error)
-    }
-  }*/
-  
-  /*const uploadMetadata = async (name, description, external_url, CID) => {
-    try {
-      const data = JSON.stringify({
-        pinataContent: {
-          name: `${name}`,
-          description: `${description}`,
-          external_url: `${external_url}`,
-          image: `ipfs://${CID}`,
-        },
-        pinataMetadata: {
-          name: "Pinnie NFT Metadata",
-        },
-      });
-  
-      const res = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.PINATA_JWT}`
-        },
-        body: data
-      })
-      const resData = await res.json()
-      console.log("Metadata uploaded, CID:", resData.IpfsHash)
-      return resData.IpfsHash
-    } catch (error) {
-      console.log(error)
-    }
-  }
-
-  const main = async (file, name, description, external_url, wallet) => {
-    try {
-      const imageCID = await uploadImage(file)
-      const metadataCID = await uploadMetadata(name, description, external_url, imageCID)
-      //await mintNft(metadataCID, wallet)
-    } catch (error) {
-      console.log(error)
-    }
-  }*/
-
-    const mintHandler = async () => {
       try {
-        const data = new FormData()
-        data.append("file", image)
-  
-        const pinataMetaData =  JSON.stringify({name: name, description: description, price: price});
-  
-        data.append("pinataMetadata", pinataMetaData);
-  
-        const pinataOptions = JSON.stringify({
-          cidVersion: 0,
-        });
-  
-        data.append('pinataOptions', pinataOptions);
-  
-        const res = await axios.post(`https://api.pinata.cloud/pinning/pinFileToIPFS`, data, {
-          maxbodylength: "Infinity",
-          headers: {
-            'Content-Type': `multipart/form-data; boundary=${data._boundary}`,
-            'Authorization': `Bearer ${process.env.REACT_APP_PINATA_JWT_KEY}`
-          },
-        })
-        
-        console.log(toWei(price).toString())
-        console.log("File uploaded, CID: ", res.data.IpfsHash)
+        const res = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
+              maxBodyLength: "Infinity",
+              headers: {
+                  'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
+                  'Authorization': `Bearer ${process.env.REACT_APP_PINATA_JWT_KEY}`
+              }
+          });
+          console.log("response: ", res)
+          console.log(toWei(price).toString())
+          console.log("File uploaded, CID: ", res.data.IpfsHash)
+
         const URI = `ipfs/${res.data.IpfsHash}`
 
         const signer = await provider.getSigner()
@@ -144,12 +78,14 @@ const Mint = ({ provider, artnft }) => {
         const transaction = await artnft.connect(signer).createToken(URI, toWei(price).toString(), { value: ethers.utils.parseEther('0.01') })
         await transaction.wait()
       } catch (error) {
-        console.log(error)
-        window.alert('User rejected or transaction reverted', error)
+        console.log(error);
+        window.alert('User rejected or transaction reverted');
+        return;
       }
     }
 
     useEffect(() => {
+      console.log(API_KEY)
       testAuthentication()
     }, [])
 
@@ -160,10 +96,10 @@ const Mint = ({ provider, artnft }) => {
             <div className="content mx-auto">
               <Row className="g-4">
                 <Form.Control
-                  type="file"
+                  type="file" 
                   required
                   name="file" 
-                  onChange={(e) => setImage(e.target.files[0])} 
+                  onChange={(e) => setFiles(e.target.files[0])} 
                 />
 
                 <Form.Control onChange={(e) => setName(e.target.value)} size="lg" required type="text" placeholder="Name" />

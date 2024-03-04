@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ethers } from 'ethers'
 import { Row, Col, Card, Button } from 'react-bootstrap'
+import ReactAudioPlayer from 'react-audio-player'
 
 const toWei = (n) => ethers.utils.parseEther(n.toString())
 const fromWei = (n) => ethers.utils.formatEther(n)
@@ -101,6 +102,11 @@ const NFTShop = ({ provider, artnft, account }) => {
                              height="75px"
                              width="200px"
                             />
+                            <ReactAudioPlayer style={{ width: "180px", height: "20px" }}
+                             src={`https://gateway.pinata.cloud/${uri}`}
+                             controls
+                             controlslist="nodownload"
+                            />
                              <Card.Footer> 
                                 
                              </Card.Footer>
@@ -120,6 +126,11 @@ const NFTShop = ({ provider, artnft, account }) => {
                              src={`https://gateway.pinata.cloud/${uri}`} 
                              height="200px"
                              width="200px"
+                            />
+                            <ReactAudioPlayer style={{ width: "180px", height: "20px" }}
+                             src={`https://gateway.pinata.cloud/${uri}`}
+                             controls
+                             controlslist="nodownload"
                             />
                              <Card.Footer> 
                                 <Button onClick={() => buyNFT(index)} variant="primary" size="lg">
