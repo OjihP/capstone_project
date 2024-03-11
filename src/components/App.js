@@ -19,6 +19,9 @@ import ARTNFT_ABI from '../abis/ArtistContract.json'
 // Config: Import your network config here
 import config from '../config.json';
 
+const toWei = (n) => ethers.utils.parseEther(n.toString())
+const fromWei = (n) => ethers.utils.formatEther(n)
+
 function App() {
   const [provider, setProvider] = useState(null)
   const [account, setAccount] = useState(null)
@@ -46,11 +49,37 @@ function App() {
     let balance = await provider.getBalance(account)
     balance = ethers.utils.formatUnits(balance, 18)
     setBalance(balance)
-    
+
     //loadContract()
     setIsLoading(false)
     
   }
+  
+  const listenToEvent = async () => {
+      artnft.on("TokenListedSuccess", (tokenId, creator, owner, seller, price, currentlyListed) => {
+        let data = {
+          tokenId: tokenId.toString(), 
+          creator, 
+          price: fromWei(price.toString()),
+        }
+        console.log("Most recent event: ", data)
+        return data
+      })
+      
+      let eventStream = await artnft.queryFilter('TokenListedSuccess')
+
+      eventStream.forEach((log) => {
+        const event = artnft.interface.parseLog(log)
+
+        const tokenId = event.args[0]
+        const creator = event.args[1]
+        const price = event.args[4]
+
+        console.log('tokenId: ', tokenId.toString())
+        console.log('Creator: ', creator)
+        console.log('Price: ', fromWei(price.toString()))
+      })
+    }
 
   /*useEffect(() => {
     if (isLoading) {
@@ -61,7 +90,7 @@ function App() {
   return(
     <Container>
            <HashRouter>
-              <Navigation web3Handler={web3Handler} account={account} />
+              <Navigation web3Handler={web3Handler} account={account} listenToEvent={listenToEvent} />
               <Routes>
                 <Route path="/" />
                 <Route path="/about" />

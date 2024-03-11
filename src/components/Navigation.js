@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import DropdownButton from 'react-bootstrap/DropdownButton';
 import logo from '../logo.png';
 
-const Navigation = ({ web3Handler, account }) => {
+const Navigation = ({ web3Handler, account, listenToEvent }) => {
   return (
     <Navbar expand="lg" bg="secondary" variant="dark">
       <img
@@ -38,6 +38,9 @@ const Navigation = ({ web3Handler, account }) => {
             ) : (
               <Button onClick={web3Handler} variant="outline-light">Connect Wallet</Button>
             )}
+          </Nav>
+          <Nav>
+            <Button onClick={listenToEvent} variant="outline-light">Listen To Events</Button>
           </Nav>
         </Navbar.Collapse>
       </Container>

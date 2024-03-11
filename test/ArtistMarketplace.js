@@ -252,6 +252,28 @@ describe("ArtistMarketplace", function () {
                     expect(listedToken.price).to.equal(price);
                     expect(listedToken.currentlyListed).to.equal(true);
                 });
+
+                it('should demonstrate basic event subscription and history', async () => {
+                    const tokenId = 1; // Replace with the desired tokenId
+                    const tokenURI_1 = 'your_token_uri_1' // Replace with the desired token URI
+                    const tokenURI_2 = 'your_token_uri_2' // Replace with the desired token URI
+                    const tokenURI_3 = 'your_token_uri_3' // Replace with the desired token URI
+                    const price1 = 100; // Replace with the desired token price
+                    const price2 = 200; // Replace with the desired token price
+                    const price3 = 300; // Replace with the desired token price
+
+                    let artistMint = await artistContract.connect(artist1).createToken(tokenURI_1, price1, { value: ethers.utils.parseEther('0.01') })
+                    await artistMint.wait()
+
+                    artistMint = await artistContract.connect(artist1).createToken(tokenURI_2, price2, { value: ethers.utils.parseEther('0.01') })
+                    await artistMint.wait()
+
+                    artistMint = await artistContract.connect(artist1).createToken(tokenURI_3, price3, { value: ethers.utils.parseEther('0.01') })
+                    await artistMint.wait()
+
+                    let eventStream = await artistContract.queryFilter('TokenListedSuccess')
+                        console.log(eventStream)
+                })
             })
 
             describe('Failure', async () => {

@@ -5,12 +5,6 @@ import { ethers } from 'ethers';
 
 import axios from 'axios';
 
-// Import the NFTStorage class and File constructor from the 'nft.storage' package
-import { NFTStorage } from 'nft.storage'
-
-// Paste your NFT.Storage API key into the quotes:
-const API_KEY = `${process.env.REACT_APP_PINATA_API_KEY}`
-
 const toWei = (n) => ethers.utils.parseEther(n.toString())
 
 const FormData = require("form-data")
@@ -40,7 +34,7 @@ const Mint = ({ provider, artnft }) => {
           .catch(function (error) {
               //handle error here
           });
-  };
+    };
 
     const mintHandler = async () => {
       const formData = new FormData();
@@ -84,8 +78,61 @@ const Mint = ({ provider, artnft }) => {
       }
     }
 
+    /*const mintHandler = async () => {
+        console.log("FileList Object: ", files)
+
+      const filesArray = Array.from(files)
+        console.log("FileList Object converted into an array: ", filesArray)
+
+      const formData = new FormData();
+
+      filesArray.forEach((file, index) => {
+        formData.append(`file[${index}]`, file);
+
+        const pinataMetadata = JSON.stringify({
+          name: file.name,
+          keyvalues: {
+            index: index
+          }
+        });
+        formData.append(`pinataMetadata[${index}]`, pinataMetadata);
+
+        const pinataOptions = JSON.stringify({
+          cidVersion: 0,
+        });
+        formData.append(`pinataOptions[${index}]`, pinataOptions);
+      })
+
+      formData.forEach((value, key) => {
+        console.log("Contents of formData object: ", key, value);
+      });
+
+      try {
+        const res = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
+              maxBodyLength: "Infinity",
+              headers: {
+                  'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
+                  'Authorization': `Bearer ${process.env.REACT_APP_PINATA_JWT_KEY}`
+              }
+          });
+          console.log("response: ", res)
+          console.log(toWei(price).toString())
+          console.log("File uploaded, CID: ", res.data.IpfsHash)
+
+        const URI = `ipfs/${res.data.IpfsHash}`
+
+        const signer = await provider.getSigner()
+
+        const transaction = await artnft.connect(signer).createToken(URI, toWei(price).toString(), { value: ethers.utils.parseEther('0.01') })
+        await transaction.wait()
+      } catch (error) {
+        console.log(error);
+        window.alert('User rejected or transaction reverted');
+        return;
+      }
+    }*/
+
     useEffect(() => {
-      console.log(API_KEY)
       testAuthentication()
     }, [])
 

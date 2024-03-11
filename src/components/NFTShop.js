@@ -102,7 +102,7 @@ const NFTShop = ({ provider, artnft, account }) => {
                              height="75px"
                              width="200px"
                             />
-                            <ReactAudioPlayer style={{ width: "180px", height: "20px" }}
+                            <ReactAudioPlayer style={{ width: "0px", height: "20px" }}
                              src={`https://gateway.pinata.cloud/${uri}`}
                              controls
                              controlslist="nodownload"
@@ -125,7 +125,7 @@ const NFTShop = ({ provider, artnft, account }) => {
                              variant="bottom" 
                              src={`https://gateway.pinata.cloud/${uri}`} 
                              height="200px"
-                             width="200px"
+                             width="300px"
                             />
                             <ReactAudioPlayer style={{ width: "180px", height: "20px" }}
                              src={`https://gateway.pinata.cloud/${uri}`}
