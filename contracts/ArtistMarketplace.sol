@@ -30,6 +30,8 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         address payable owner;
         address payable seller;
         uint256 price;
+        string[] assetURIs;
+        string[] assetTypes;
         bool currentlyListed;
     }
 
@@ -40,13 +42,13 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         address owner,
         address seller,
         uint256 price,
+        string[] assetURIs,
+        string[] assetTypes,
         bool currentlyListed
     );
 
     // This mapping maps tokenId to token info and is helpful when retrieving details about a tokenId
     mapping(uint256 => ListedToken) private idToListedToken;
-    //
-    mapping(uint256 => string) private tokenURIs;
     // 
     mapping(address => bool) public whiteList;
 
@@ -93,10 +95,6 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         return idToListedToken[tokenId].tokenId;
     }
 
-    function getTokenURI(uint256 tokenId) public view returns (string memory) {
-        return tokenURIs[tokenId];
-    }
-
     function getTokenIdsFromListedToken() public view returns (uint256[] memory) {
         uint nftCount = _tokenIds.current();
         uint256[] memory tokenIds = new uint256[](nftCount);
@@ -117,6 +115,18 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         return idToListedToken[tokenId].price;
     }
 
+    function getAssetURIFromListedToken(uint256 tokenId, uint256 index) public view returns (string memory) {
+        return idToListedToken[tokenId].assetURIs[index];
+    }
+
+    function getAllAssetURIsFromListedToken(uint256 tokenId) public view returns (string[] memory) {
+        return idToListedToken[tokenId].assetURIs;
+    }
+
+    function getFileTypesFromListedToken(uint256 tokenId) public view returns (string[] memory) {
+        return idToListedToken[tokenId].assetTypes;
+    }
+
     function getCurrentToken() public view returns (uint256) {
         return _tokenIds.current();
     }
@@ -132,7 +142,7 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
     // Main Functions
 
     // The first time a token is created, it is listed here
-    function createToken(string memory tokenURI, uint256 price) public payable onlyWhtListed returns (uint) {
+    function createToken(uint256 price, string[] memory _assetURIs, string[] memory _assetTypes) public payable onlyWhtListed returns (uint) {
         // Increment the tokenId counter, which is keeping track of the number of minted NFTs
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
@@ -140,20 +150,14 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         // Mint the NFT with tokenId newTokenId to the address who called createToken
         _safeMint(msg.sender, newTokenId);
 
-        // Map the tokenId to the tokenURI (which is an IPFS URL with the NFT metadata)
-        _setTokenURI(newTokenId, tokenURI);
-
-        // Set the tokenURI to the tokenId in the mapping
-         tokenURIs[newTokenId] = tokenURI;
-
         // Helper function to update Global variables and emit an event
-        createListedToken(newTokenId, price);
+        createListedToken(newTokenId, price, _assetURIs, _assetTypes);
 
         return newTokenId;
     }
 
     // Helps create the object of type ListedToken for the NFT and update the idToListedToken mapping
-    function createListedToken(uint256 tokenId, uint256 price) private {
+    function createListedToken(uint256 tokenId, uint256 price, string[] memory _assetURIs, string[] memory _assetTypes) private {
         // Make sure the sender sent enough ETH to pay for listing
         require(msg.value == listPrice, "Please send the correct price");
         // Just sanity check
@@ -166,6 +170,8 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
             payable(address(this)),
             payable(msg.sender),
             price,
+            _assetURIs,
+            _assetTypes,
             true
         );
 
@@ -179,6 +185,8 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
             address(this),
             msg.sender,
             price,
+            _assetURIs,
+            _assetTypes,
             true
         );
     }

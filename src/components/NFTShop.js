@@ -10,20 +10,27 @@ const NFTShop = ({ provider, artnft, account }) => {
    const [listedtokenIds, setListedTokenIds] = useState([])
    const [listedURIs, setTokenURIs] = useState([])
    const [listedPrice, setListedPrice] = useState([])
-   const [myListedURIs, setMyURIs] = useState([])
+   const [_fileTypes, setFileTypes] = useState([])
+   const [audioFilePresent, setAudioFilePresent] = useState(false)
+   //const [myListedURIs, setMyURIs] = useState([])
         
         const loadAllNFTs = async () => {
-
             try {
                 const signer = await provider.getSigner()
                 const Ids = await artnft.connect(signer).getTokenIdsFromListedToken()
                 console.log("Ids: ", Ids.toString())
                 setListedTokenIds(Ids)
                 const URIs = Ids.map(async (tokenId) => {
-                    const tokenURI = await artnft.connect(signer).getTokenURI(tokenId)
-                    console.log("Token URI", tokenURI)
-                    return tokenURI 
+                    const assetURIs = await artnft.connect(signer).getAllAssetURIsFromListedToken(tokenId)
+                    console.log("Asset URIs", assetURIs)
+                    return assetURIs 
                 }) 
+
+                const fileTypes = Ids.map(async (tokenId) => {
+                    const tokenFileType = await artnft.connect(signer).getFileTypesFromListedToken(tokenId)
+                    console.log("File Types within Token: ", tokenFileType)
+                    return tokenFileType
+                })
 
                 const Prices = Ids.map(async (tokenId) => {
                     const tokenPrice = await artnft.connect(signer).getTokenPriceFromListedToken(tokenId)
@@ -33,14 +40,23 @@ const NFTShop = ({ provider, artnft, account }) => {
                 
                 const tokenURIs = await Promise.all(URIs)
                 const tokenPrices = await Promise.all(Prices)
+                const tokenFileTypes = await Promise.all(fileTypes)
                 console.log("URIs: ", URIs)
                 console.log('Prices: ', Prices)
+                console.log('File Types: ', fileTypes)
                 setTokenURIs(tokenURIs)
                 setListedPrice(tokenPrices)
+                setFileTypes(tokenFileTypes)
+                console.log(listedURIs)
+                console.log(_fileTypes)
                 console.log(listedPrice)
 
-                
-                
+                /*_fileTypes.forEach(types => {
+                    if (types.includes('audio/mpeg')) {
+                        setAudioFilePresent(true);
+                    }
+                })*/
+
             } catch (error) {
                 console.log('Error', error)
             }
@@ -59,8 +75,8 @@ const NFTShop = ({ provider, artnft, account }) => {
             const myTokenURIs = await Promise.all(myURIs)
             console.log("URIs: ", myURIs)
 
-            setMyURIs(myTokenURIs)
-            console.log(myListedURIs)
+            //setMyURIs(myTokenURIs)
+            //console.log(myListedURIs)
             const listedStruct = await artnft.getListedForTokenId(1)
             console.log('listedTokenStruct: ', listedStruct)
         }
@@ -85,34 +101,20 @@ const NFTShop = ({ provider, artnft, account }) => {
 
     useEffect(() => {
         loadAllNFTs()
-        getMyNFTs()
-    }, [provider, artnft]);
+        //getMyNFTs()
+        const audioPresentList = listedURIs.map(uri => {
+            return uri.some(type => _fileTypes.some(types => types.includes(type)));
+        });
+        console.log(audioPresentList)
+        setAudioFilePresent(audioPresentList);
+    }, []);
 
     return (
         <div className='text-center'>
             <p><strong>MY NFTs</strong></p>
             <div className="px-5 py-3 container">
                 <Row xs={1} md={2} lg={4} className="g-4 py-3">
-                    {myListedURIs.map((uri, index) => (
-                    <Col key={index} className="overflow-hidden">
-                        <Card style={{ width: "75px" }}>
-                            <Card.Img 
-                             variant="bottom" 
-                             src={`https://gateway.pinata.cloud/${uri}`} 
-                             height="75px"
-                             width="200px"
-                            />
-                            <ReactAudioPlayer style={{ width: "0px", height: "20px" }}
-                             src={`https://gateway.pinata.cloud/${uri}`}
-                             controls
-                             controlslist="nodownload"
-                            />
-                             <Card.Footer> 
-                                
-                             </Card.Footer>
-                        </Card>
-                    </Col>
-                ))}
+                    
                 </Row>
             </div>
             <p><strong>NFT Shop</strong></p>
@@ -123,15 +125,18 @@ const NFTShop = ({ provider, artnft, account }) => {
                         <Card style={{ width: "200px" }}>
                             <Card.Img 
                              variant="bottom" 
-                             src={`https://gateway.pinata.cloud/${uri}`} 
+                             src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`} 
                              height="200px"
                              width="300px"
                             />
-                            <ReactAudioPlayer style={{ width: "180px", height: "20px" }}
-                             src={`https://gateway.pinata.cloud/${uri}`}
-                             controls
-                             controlslist="nodownload"
-                            />
+                            {audioFilePresent[index] && (
+                                <ReactAudioPlayer
+                                    style={{ width: "180px", height: "20px" }}
+                                    src={`https://gateway.pinata.cloud/ipfs/${uri[1]}`}
+                                    controls
+                                    controlslist="nodownload"
+                                />
+                            )}
                              <Card.Footer> 
                                 <Button onClick={() => buyNFT(index)} variant="primary" size="lg">
                                     Buy {fromWei(listedPrice[index]).toString()} ETH    

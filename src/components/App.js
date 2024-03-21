@@ -56,7 +56,7 @@ function App() {
   }
   
   const listenToEvent = async () => {
-      artnft.on("TokenListedSuccess", (tokenId, creator, owner, seller, price, currentlyListed) => {
+      artnft.on("TokenListedSuccess", (tokenId, creator, owner, seller, price, assetURIs, currentlyListed) => {
         let data = {
           tokenId: tokenId.toString(), 
           creator, 
@@ -107,6 +107,7 @@ function App() {
                   <Mint 
                     provider={provider}
                     artnft={artnft} 
+                    account={account}
                   />} 
                 />
               </Routes>

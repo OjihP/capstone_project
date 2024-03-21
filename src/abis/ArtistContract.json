@@ -156,6 +156,18 @@
       },
       {
         "indexed": false,
+        "internalType": "string[]",
+        "name": "assetURIs",
+        "type": "string[]"
+      },
+      {
+        "indexed": false,
+        "internalType": "string[]",
+        "name": "assetTypes",
+        "type": "string[]"
+      },
+      {
+        "indexed": false,
         "internalType": "bool",
         "name": "currentlyListed",
         "type": "bool"
@@ -242,14 +254,19 @@
   {
     "inputs": [
       {
-        "internalType": "string",
-        "name": "tokenURI",
-        "type": "string"
-      },
-      {
         "internalType": "uint256",
         "name": "price",
         "type": "uint256"
+      },
+      {
+        "internalType": "string[]",
+        "name": "_assetURIs",
+        "type": "string[]"
+      },
+      {
+        "internalType": "string[]",
+        "name": "_assetTypes",
+        "type": "string[]"
       }
     ],
     "name": "createToken",
@@ -274,6 +291,25 @@
     "name": "executeSale",
     "outputs": [],
     "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getAllAssetURIsFromListedToken",
+    "outputs": [
+      {
+        "internalType": "string[]",
+        "name": "",
+        "type": "string[]"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -306,6 +342,16 @@
             "internalType": "uint256",
             "name": "price",
             "type": "uint256"
+          },
+          {
+            "internalType": "string[]",
+            "name": "assetURIs",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string[]",
+            "name": "assetTypes",
+            "type": "string[]"
           },
           {
             "internalType": "bool",
@@ -354,6 +400,30 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "index",
+        "type": "uint256"
+      }
+    ],
+    "name": "getAssetURIFromListedToken",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "getCreatorAddress",
     "outputs": [
@@ -374,6 +444,25 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getFileTypesFromListedToken",
+    "outputs": [
+      {
+        "internalType": "string[]",
+        "name": "",
+        "type": "string[]"
       }
     ],
     "stateMutability": "view",
@@ -409,6 +498,16 @@
             "internalType": "uint256",
             "name": "price",
             "type": "uint256"
+          },
+          {
+            "internalType": "string[]",
+            "name": "assetURIs",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string[]",
+            "name": "assetTypes",
+            "type": "string[]"
           },
           {
             "internalType": "bool",
@@ -473,6 +572,16 @@
             "internalType": "uint256",
             "name": "price",
             "type": "uint256"
+          },
+          {
+            "internalType": "string[]",
+            "name": "assetURIs",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string[]",
+            "name": "assetTypes",
+            "type": "string[]"
           },
           {
             "internalType": "bool",
@@ -553,25 +662,6 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getTokenURI",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
       }
     ],
     "stateMutability": "view",
