@@ -7,8 +7,7 @@ const toWei = (n) => ethers.utils.parseEther(n.toString())
 const fromWei = (n) => ethers.utils.formatEther(n)
 
 const NFTShop = ({ provider, artnft, account }) => {
-   const [listedtokenIds, setListedTokenIds] = useState([])
-   const [listedURIs, setTokenURIs] = useState([])
+   const [listedMetaData, setTokenMetaData] = useState([])
    const [listedPrice, setListedPrice] = useState([])
    const [_fileTypes, setFileTypes] = useState([])
    const [audioFilePresent, setAudioFilePresent] = useState(false)
@@ -19,11 +18,11 @@ const NFTShop = ({ provider, artnft, account }) => {
                 const signer = await provider.getSigner()
                 const Ids = await artnft.connect(signer).getTokenIdsFromListedToken()
                 console.log("Ids: ", Ids.toString())
-                setListedTokenIds(Ids)
-                const URIs = Ids.map(async (tokenId) => {
-                    const assetURIs = await artnft.connect(signer).getAllAssetURIsFromListedToken(tokenId)
-                    console.log("Asset URIs", assetURIs)
-                    return assetURIs 
+               
+                const MetaData = Ids.map(async (tokenId) => {
+                    const tokenCID = await artnft.connect(signer).getTokenCIDsFromListedToken(tokenId)
+                    console.log("Token CID: ", tokenCID)
+                    return tokenCID
                 }) 
 
                 const fileTypes = Ids.map(async (tokenId) => {
@@ -38,24 +37,23 @@ const NFTShop = ({ provider, artnft, account }) => {
                     return tokenPrice.toString()
                 })
                 
-                const tokenURIs = await Promise.all(URIs)
+                const tokenMetaData = await Promise.all(MetaData)
                 const tokenPrices = await Promise.all(Prices)
                 const tokenFileTypes = await Promise.all(fileTypes)
-                console.log("URIs: ", URIs)
-                console.log('Prices: ', Prices)
-                console.log('File Types: ', fileTypes)
-                setTokenURIs(tokenURIs)
+                console.log("Token Metadata ", tokenMetaData)
+                //console.log('Prices: ', Prices)
+                //console.log('File Types: ', fileTypes)
+                setTokenMetaData(tokenMetaData)
                 setListedPrice(tokenPrices)
                 setFileTypes(tokenFileTypes)
-                console.log(listedURIs)
+                console.log(listedMetaData)
                 console.log(_fileTypes)
                 console.log(listedPrice)
 
-                /*_fileTypes.forEach(types => {
-                    if (types.includes('audio/mpeg')) {
-                        setAudioFilePresent(true);
-                    }
-                })*/
+                const audioPresentList = _fileTypes.map(types => {
+                    return types.some(type => type === 'audio/mpeg');
+                });
+                setAudioFilePresent(audioPresentList);
 
             } catch (error) {
                 console.log('Error', error)
@@ -102,11 +100,6 @@ const NFTShop = ({ provider, artnft, account }) => {
     useEffect(() => {
         loadAllNFTs()
         //getMyNFTs()
-        const audioPresentList = listedURIs.map(uri => {
-            return uri.some(type => _fileTypes.some(types => types.includes(type)));
-        });
-        console.log(audioPresentList)
-        setAudioFilePresent(audioPresentList);
     }, []);
 
     return (
@@ -120,7 +113,7 @@ const NFTShop = ({ provider, artnft, account }) => {
             <p><strong>NFT Shop</strong></p>
             <div className="px-5 py-3 container">
                 <Row xs={1} md={2} lg={4} className="g-4 py-3">
-                    {listedURIs.map((uri, index) => (
+                    {listedMetaData.map((uri, index) => (
                     <Col key={index} className="overflow-hidden">
                         <Card style={{ width: "200px" }}>
                             <Card.Img 
@@ -136,7 +129,7 @@ const NFTShop = ({ provider, artnft, account }) => {
                                     controls
                                     controlslist="nodownload"
                                 />
-                            )}
+                            )} {console.log(audioFilePresent)}
                              <Card.Footer> 
                                 <Button onClick={() => buyNFT(index)} variant="primary" size="lg">
                                     Buy {fromWei(listedPrice[index]).toString()} ETH    

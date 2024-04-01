@@ -26,24 +26,28 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
     // The structure to store info about a listed token
     struct ListedToken {
         uint256 tokenId;
-        address creator;
-        address payable owner;
-        address payable seller;
-        uint256 price;
-        string[] assetURIs;
-        string[] assetTypes;
+        string nftName;
+        address creatorAddress;
+        address payable ownerAddress;
+        address payable sellerAddress;
+        uint256 priceOfNFT;
+        string[] fileNames;
+        string[] fileTypes;
+        string[] tokenCIDs;
         bool currentlyListed;
     }
 
     // the event emitted when a token is successfully listed
     event TokenListedSuccess (
         uint256 indexed tokenId,
-        address creator,
-        address owner,
-        address seller,
-        uint256 price,
-        string[] assetURIs,
-        string[] assetTypes,
+        string nftName,
+        address creatorAddress,
+        address ownerAddress,
+        address sellerAddress,
+        uint256 priceOfNFT,
+        string[] fileNames,
+        string[] fileTypes,
+        string[] tokenCIDs,
         bool currentlyListed
     );
 
@@ -82,10 +86,10 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         return listPrice;
     }
 
-    function getLatestIdToListedToken() public view returns (ListedToken memory) {
+    /*function getLatestIdToListedToken() public view returns (ListedToken memory) {
         uint256 currentTokenId = _tokenIds.current();
         return idToListedToken[currentTokenId];
-    }
+    }*/
 
     function getListedForTokenId(uint256 tokenId) public view returns (ListedToken memory) {
         return idToListedToken[tokenId];
@@ -94,6 +98,23 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
     function getTokenIdFromListedToken(uint256 tokenId) public view returns (uint256) {
         return idToListedToken[tokenId].tokenId;
     }
+
+    function getNFTNameFromListedToken(uint256 tokenId) public view returns (string memory) {
+        return idToListedToken[tokenId].nftName;
+    }
+
+    function getFileNamesFromListedToken(uint256 tokenId) public view returns (string[] memory) {
+        return idToListedToken[tokenId].fileNames;
+    }
+
+    function getFileTypesFromListedToken(uint256 tokenId) public view returns (string[] memory) {
+        return idToListedToken[tokenId].fileTypes;
+    }
+
+    function getTokenCIDsFromListedToken(uint256 tokenId) public view returns (string[] memory) {
+        return idToListedToken[tokenId].tokenCIDs;
+    }
+
 
     function getTokenIdsFromListedToken() public view returns (uint256[] memory) {
         uint nftCount = _tokenIds.current();
@@ -112,19 +133,7 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
     }
 
     function getTokenPriceFromListedToken(uint256 tokenId) public view returns (uint256) {
-        return idToListedToken[tokenId].price;
-    }
-
-    function getAssetURIFromListedToken(uint256 tokenId, uint256 index) public view returns (string memory) {
-        return idToListedToken[tokenId].assetURIs[index];
-    }
-
-    function getAllAssetURIsFromListedToken(uint256 tokenId) public view returns (string[] memory) {
-        return idToListedToken[tokenId].assetURIs;
-    }
-
-    function getFileTypesFromListedToken(uint256 tokenId) public view returns (string[] memory) {
-        return idToListedToken[tokenId].assetTypes;
+        return idToListedToken[tokenId].priceOfNFT;
     }
 
     function getCurrentToken() public view returns (uint256) {
@@ -142,7 +151,13 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
     // Main Functions
 
     // The first time a token is created, it is listed here
-    function createToken(uint256 price, string[] memory _assetURIs, string[] memory _assetTypes) public payable onlyWhtListed returns (uint) {
+    function createToken(
+        string memory _nftName, 
+        uint256 price, 
+        string[] memory _fileNames, 
+        string[] memory _fileTypes, 
+        string[] memory _tokenCIDs 
+        ) public payable onlyWhtListed returns (uint) {
         // Increment the tokenId counter, which is keeping track of the number of minted NFTs
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
@@ -151,13 +166,20 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         _safeMint(msg.sender, newTokenId);
 
         // Helper function to update Global variables and emit an event
-        createListedToken(newTokenId, price, _assetURIs, _assetTypes);
+        createListedToken(newTokenId, _nftName, price, _fileNames, _fileTypes, _tokenCIDs);
 
         return newTokenId;
     }
 
     // Helps create the object of type ListedToken for the NFT and update the idToListedToken mapping
-    function createListedToken(uint256 tokenId, uint256 price, string[] memory _assetURIs, string[] memory _assetTypes) private {
+    function createListedToken(
+        uint256 tokenId, 
+        string memory _nftName, 
+        uint256 price, 
+        string[] memory _fileNames,
+        string[] memory _fileTypes,
+        string[] memory _tokenCIDs
+        ) private {
         // Make sure the sender sent enough ETH to pay for listing
         require(msg.value == listPrice, "Please send the correct price");
         // Just sanity check
@@ -166,12 +188,14 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         // Update the mapping of tokenId's to Token details, useful for retrieval functions
         idToListedToken[tokenId] = ListedToken(
             tokenId,
+            _nftName,
             msg.sender,
             payable(address(this)),
             payable(msg.sender),
             price,
-            _assetURIs,
-            _assetTypes,
+            _fileNames,
+            _fileTypes,
+            _tokenCIDs,
             true
         );
 
@@ -181,12 +205,14 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         // Emit the event for successful transfer. The frontend parses this message and updates the end user
         emit TokenListedSuccess(
             tokenId,
+            _nftName,
             msg.sender,
             address(this),
             msg.sender,
             price,
-            _assetURIs,
-            _assetTypes,
+            _fileNames,
+            _fileTypes,
+            _tokenCIDs,
             true
         );
     }
@@ -251,14 +277,14 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
 
     // the function that executes the sale on the marketplace
     function executeSale(uint256 tokenId) public payable {
-        uint price = idToListedToken[tokenId].price;
-        address seller = idToListedToken[tokenId].seller;
+        uint price = idToListedToken[tokenId].priceOfNFT;
+        address seller = idToListedToken[tokenId].sellerAddress;
         require(msg.value == price, "Please submit the asking price in order to complete the purchase");
 
         // update the details of the token
         idToListedToken[tokenId].currentlyListed = true; // extend the functionally...
-        idToListedToken[tokenId].owner = payable(msg.sender);
-        idToListedToken[tokenId].seller = payable(msg.sender);
+        idToListedToken[tokenId].ownerAddress = payable(msg.sender);
+        idToListedToken[tokenId].sellerAddress = payable(msg.sender);
         _itemsSold.increment();
 
         // Actually transfer the token to the new owner

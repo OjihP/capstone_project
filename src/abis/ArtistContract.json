@@ -132,38 +132,50 @@
       },
       {
         "indexed": false,
+        "internalType": "string",
+        "name": "nftName",
+        "type": "string"
+      },
+      {
+        "indexed": false,
         "internalType": "address",
-        "name": "creator",
+        "name": "creatorAddress",
         "type": "address"
       },
       {
         "indexed": false,
         "internalType": "address",
-        "name": "owner",
+        "name": "ownerAddress",
         "type": "address"
       },
       {
         "indexed": false,
         "internalType": "address",
-        "name": "seller",
+        "name": "sellerAddress",
         "type": "address"
       },
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "price",
+        "name": "priceOfNFT",
         "type": "uint256"
       },
       {
         "indexed": false,
         "internalType": "string[]",
-        "name": "assetURIs",
+        "name": "fileNames",
         "type": "string[]"
       },
       {
         "indexed": false,
         "internalType": "string[]",
-        "name": "assetTypes",
+        "name": "fileTypes",
+        "type": "string[]"
+      },
+      {
+        "indexed": false,
+        "internalType": "string[]",
+        "name": "tokenCIDs",
         "type": "string[]"
       },
       {
@@ -254,18 +266,28 @@
   {
     "inputs": [
       {
+        "internalType": "string",
+        "name": "_nftName",
+        "type": "string"
+      },
+      {
         "internalType": "uint256",
         "name": "price",
         "type": "uint256"
       },
       {
         "internalType": "string[]",
-        "name": "_assetURIs",
+        "name": "_fileNames",
         "type": "string[]"
       },
       {
         "internalType": "string[]",
-        "name": "_assetTypes",
+        "name": "_fileTypes",
+        "type": "string[]"
+      },
+      {
+        "internalType": "string[]",
+        "name": "_tokenCIDs",
         "type": "string[]"
       }
     ],
@@ -294,25 +316,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getAllAssetURIsFromListedToken",
-    "outputs": [
-      {
-        "internalType": "string[]",
-        "name": "",
-        "type": "string[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "getAllNFTs",
     "outputs": [
@@ -324,33 +327,43 @@
             "type": "uint256"
           },
           {
+            "internalType": "string",
+            "name": "nftName",
+            "type": "string"
+          },
+          {
             "internalType": "address",
-            "name": "creator",
+            "name": "creatorAddress",
             "type": "address"
           },
           {
             "internalType": "address payable",
-            "name": "owner",
+            "name": "ownerAddress",
             "type": "address"
           },
           {
             "internalType": "address payable",
-            "name": "seller",
+            "name": "sellerAddress",
             "type": "address"
           },
           {
             "internalType": "uint256",
-            "name": "price",
+            "name": "priceOfNFT",
             "type": "uint256"
           },
           {
             "internalType": "string[]",
-            "name": "assetURIs",
+            "name": "fileNames",
             "type": "string[]"
           },
           {
             "internalType": "string[]",
-            "name": "assetTypes",
+            "name": "fileTypes",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string[]",
+            "name": "tokenCIDs",
             "type": "string[]"
           },
           {
@@ -400,30 +413,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "index",
-        "type": "uint256"
-      }
-    ],
-    "name": "getAssetURIFromListedToken",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "getCreatorAddress",
     "outputs": [
@@ -457,7 +446,7 @@
         "type": "uint256"
       }
     ],
-    "name": "getFileTypesFromListedToken",
+    "name": "getFileNamesFromListedToken",
     "outputs": [
       {
         "internalType": "string[]",
@@ -469,55 +458,19 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "getLatestIdToListedToken",
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getFileTypesFromListedToken",
     "outputs": [
       {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "creator",
-            "type": "address"
-          },
-          {
-            "internalType": "address payable",
-            "name": "owner",
-            "type": "address"
-          },
-          {
-            "internalType": "address payable",
-            "name": "seller",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "price",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string[]",
-            "name": "assetURIs",
-            "type": "string[]"
-          },
-          {
-            "internalType": "string[]",
-            "name": "assetTypes",
-            "type": "string[]"
-          },
-          {
-            "internalType": "bool",
-            "name": "currentlyListed",
-            "type": "bool"
-          }
-        ],
-        "internalType": "struct ArtistMarketplace.ListedToken",
+        "internalType": "string[]",
         "name": "",
-        "type": "tuple"
+        "type": "string[]"
       }
     ],
     "stateMutability": "view",
@@ -554,33 +507,43 @@
             "type": "uint256"
           },
           {
+            "internalType": "string",
+            "name": "nftName",
+            "type": "string"
+          },
+          {
             "internalType": "address",
-            "name": "creator",
+            "name": "creatorAddress",
             "type": "address"
           },
           {
             "internalType": "address payable",
-            "name": "owner",
+            "name": "ownerAddress",
             "type": "address"
           },
           {
             "internalType": "address payable",
-            "name": "seller",
+            "name": "sellerAddress",
             "type": "address"
           },
           {
             "internalType": "uint256",
-            "name": "price",
+            "name": "priceOfNFT",
             "type": "uint256"
           },
           {
             "internalType": "string[]",
-            "name": "assetURIs",
+            "name": "fileNames",
             "type": "string[]"
           },
           {
             "internalType": "string[]",
-            "name": "assetTypes",
+            "name": "fileTypes",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string[]",
+            "name": "tokenCIDs",
             "type": "string[]"
           },
           {
@@ -611,6 +574,44 @@
         "internalType": "uint256[]",
         "name": "",
         "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getNFTNameFromListedToken",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getTokenCIDsFromListedToken",
+    "outputs": [
+      {
+        "internalType": "string[]",
+        "name": "",
+        "type": "string[]"
       }
     ],
     "stateMutability": "view",

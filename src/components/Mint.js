@@ -103,16 +103,23 @@ const Mint = ({ provider, artnft, account }) => {
     }
 
     const mintHandler = async () => {
-      try {
-        const assetCIDs = _fileItemArray.map(item => item.CID)
-        const assetfileTypes = _fileItemArray.map(item => item.fileType)
-        console.log(assetCIDs)
-        console.log(assetfileTypes)
+      const _nftName = _fileItemArray.map(item => item.nftName)
+      const _fileNames = _fileItemArray.map(item => item. fileName)
+      const _fileTypes = _fileItemArray.map(item => item.fileType)
+      const _tokenCIDs = _fileItemArray.map(item => item.CID)
+        
+        console.log(_nftName.toString())
+        console.log(_fileNames)
+        console.log(_fileTypes)
+        console.log(_tokenCIDs)
+        console.log(toWei(price).toString())
 
+      try {
         const signer = await provider.getSigner()
 
-        const transaction = await artnft.connect(signer).createToken(toWei(price).toString(), assetCIDs, assetfileTypes, { value: ethers.utils.parseEther('0.01') })
+        const transaction = await artnft.connect(signer).createToken(_nftName.toString(), toWei(price).toString(), _fileNames, _fileTypes, _tokenCIDs, { value: toWei(0.01) })
         await transaction.wait()
+
       } catch (error) {
         console.log(error);
         window.alert('User rejected or transaction reverted');
