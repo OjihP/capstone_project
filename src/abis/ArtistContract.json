@@ -74,38 +74,6 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "_fromTokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "_toTokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "BatchMetadataUpdate",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "_tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "MetadataUpdate",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
         "indexed": true,
         "internalType": "address",
         "name": "previousOwner",
@@ -219,10 +187,21 @@
         "internalType": "address",
         "name": "_user",
         "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "_name",
+        "type": "string"
       }
     ],
     "name": "addToWhtList",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -266,6 +245,11 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "_mintAmount",
+        "type": "uint256"
+      },
+      {
         "internalType": "string",
         "name": "_nftName",
         "type": "string"
@@ -308,6 +292,11 @@
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "purchaseAmount",
+        "type": "uint256"
       }
     ],
     "name": "executeSale",
@@ -317,62 +306,32 @@
   },
   {
     "inputs": [],
-    "name": "getAllNFTs",
+    "name": "getAllUsersOnWhiteList",
     "outputs": [
       {
         "components": [
           {
             "internalType": "uint256",
-            "name": "tokenId",
+            "name": "userNumber",
             "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "nftName",
-            "type": "string"
           },
           {
             "internalType": "address",
-            "name": "creatorAddress",
+            "name": "userAddress",
             "type": "address"
           },
           {
-            "internalType": "address payable",
-            "name": "ownerAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "address payable",
-            "name": "sellerAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "priceOfNFT",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string[]",
-            "name": "fileNames",
-            "type": "string[]"
-          },
-          {
-            "internalType": "string[]",
-            "name": "fileTypes",
-            "type": "string[]"
-          },
-          {
-            "internalType": "string[]",
-            "name": "tokenCIDs",
-            "type": "string[]"
+            "internalType": "string",
+            "name": "nameForAddress",
+            "type": "string"
           },
           {
             "internalType": "bool",
-            "name": "currentlyListed",
+            "name": "isListed",
             "type": "bool"
           }
         ],
-        "internalType": "struct ArtistMarketplace.ListedToken[]",
+        "internalType": "struct ArtistWhiteList.UserInfo[]",
         "name": "",
         "type": "tuple[]"
       }
@@ -400,167 +359,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "getArtistAddress",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getCreatorAddress",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getCurrentToken",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getFileNamesFromListedToken",
-    "outputs": [
-      {
-        "internalType": "string[]",
-        "name": "",
-        "type": "string[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getFileTypesFromListedToken",
-    "outputs": [
-      {
-        "internalType": "string[]",
-        "name": "",
-        "type": "string[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getListPrice",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getListedForTokenId",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "nftName",
-            "type": "string"
-          },
-          {
-            "internalType": "address",
-            "name": "creatorAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "address payable",
-            "name": "ownerAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "address payable",
-            "name": "sellerAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "priceOfNFT",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string[]",
-            "name": "fileNames",
-            "type": "string[]"
-          },
-          {
-            "internalType": "string[]",
-            "name": "fileTypes",
-            "type": "string[]"
-          },
-          {
-            "internalType": "string[]",
-            "name": "tokenCIDs",
-            "type": "string[]"
-          },
-          {
-            "internalType": "bool",
-            "name": "currentlyListed",
-            "type": "bool"
-          }
-        ],
-        "internalType": "struct ArtistMarketplace.ListedToken",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -582,19 +380,82 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
       }
     ],
-    "name": "getNFTNameFromListedToken",
+    "name": "getUserByAddress",
     "outputs": [
       {
-        "internalType": "string",
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "userNumber",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "userAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "nameForAddress",
+            "type": "string"
+          },
+          {
+            "internalType": "bool",
+            "name": "isListed",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct ArtistWhiteList.UserInfo",
         "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_name",
         "type": "string"
       }
     ],
+    "name": "getUserByName",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "userNumber",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "userAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "nameForAddress",
+            "type": "string"
+          },
+          {
+            "internalType": "bool",
+            "name": "isListed",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct ArtistWhiteList.UserInfo",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
@@ -602,35 +463,38 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "num",
         "type": "uint256"
       }
     ],
-    "name": "getTokenCIDsFromListedToken",
+    "name": "getUserByNumber",
     "outputs": [
       {
-        "internalType": "string[]",
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "userNumber",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "userAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "nameForAddress",
+            "type": "string"
+          },
+          {
+            "internalType": "bool",
+            "name": "isListed",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct ArtistWhiteList.UserInfo",
         "name": "",
-        "type": "string[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getTokenIdFromListedToken",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",
@@ -638,31 +502,12 @@
   },
   {
     "inputs": [],
-    "name": "getTokenIdsFromListedToken",
+    "name": "getUserNumbersOnWhiteList",
     "outputs": [
       {
         "internalType": "uint256[]",
         "name": "",
         "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getTokenPriceFromListedToken",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -916,19 +761,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "_listPrice",
-        "type": "uint256"
-      }
-    ],
-    "name": "updateListPrice",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "",
         "type": "address"
@@ -937,9 +769,43 @@
     "name": "whiteList",
     "outputs": [
       {
+        "internalType": "uint256",
+        "name": "userNumber",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "nameForAddress",
+        "type": "string"
+      },
+      {
         "internalType": "bool",
-        "name": "",
+        "name": "isListed",
         "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "whiteListUserNumbers",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",

@@ -12,9 +12,12 @@ import Contact from './Contact.js';
 import Donate from './Donate.js';
 import NFTShop from './NFTShop.js';
 import Mint from './Mint.js';
+import WhiteList from './WhiteList.js';
 
 // ABIs: Import your contract ABIs here
 import ARTNFT_ABI from '../abis/ArtistContract.json'
+//import FUNC_ABI from '../abis/FunctionsContract.json'
+//import WHTLIST_ABI from '../abis/WhiteListContract.json'
 
 // Config: Import your network config here
 import config from '../config.json';
@@ -26,24 +29,38 @@ function App() {
   const [provider, setProvider] = useState(null)
   const [account, setAccount] = useState(null)
   const [artnft, setArtNFT] = useState(null)
+  const [funcs, setMarketFunctions] = useState(null)
+  const [whtList, setWhtList] = useState(null)
   const [signer, setSigner] = useState(null)
   const [balance, setBalance] = useState(0)
 
   const [isLoading, setIsLoading] = useState(true)
 
   const web3Handler = async () => {
+
     // Initiate provider
     const provider = new ethers.providers.Web3Provider(window.ethereum)
     setProvider(provider)
 
-    // Initiate contract
+    // Initiate contracts
     const artnft = new ethers.Contract(config[31337].artistContract.address, ARTNFT_ABI, provider)
     setArtNFT(artnft)
+    console.log("Initiated Contract Address: ", artnft.address)
+
+    // Initialize contract instance for MarketplaceFunctions
+    //const funcs = new ethers.Contract(config[31337].artistFunctions.address, FUNC_ABI, provider)
+    //setMarketFunctions(funcs)
+    //console.log(funcs.address)
+
+    //const whtlist = new ethers.Contract(config[31337].artistWhiteList.address, WHTLIST_ABI, provider)
+    //setWhtList(whtlist)
+    //console.log(whtlist.address)
 
     // Fetch accounts
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
     const account = ethers.utils.getAddress(accounts[0])
     setAccount(account)
+    console.log("Set Account: ", account)
     
     // Fetch account balance
     let balance = await provider.getBalance(account)
@@ -53,6 +70,18 @@ function App() {
     //loadContract()
     setIsLoading(false)
     
+  }
+
+  const disconnectFromWeb3 = () => {
+    // Reset provider, artNFT, account, and balance state variables
+    setProvider(null);
+    setArtNFT(null);
+    setMarketFunctions(null);
+    setAccount(null);
+    setBalance(null);
+    
+    // Add any additional cleanup logic you may need
+    // For example, if you have event listeners or subscriptions, you may need to remove them here.
   }
   
   const listenToEvent = async () => {
@@ -81,16 +110,25 @@ function App() {
       })
     }
 
-  /*useEffect(() => {
+  useEffect(() => {
     if (isLoading) {
-      loadBlockchainData()
+      web3Handler()
     }
-  }, [isLoading]);*/
+  }, []);
 
   return(
     <Container>
            <HashRouter>
-              <Navigation web3Handler={web3Handler} account={account} listenToEvent={listenToEvent} />
+              <Navigation 
+                web3Handler={web3Handler} 
+                disconnectFromWeb3={disconnectFromWeb3}
+                provider={provider} 
+                account={account} 
+                listenToEvent={listenToEvent}
+                artnft={artnft}
+                //func={funcs}
+                //whtList={whtList} 
+              />
               <Routes>
                 <Route path="/" />
                 <Route path="/about" />
@@ -109,6 +147,14 @@ function App() {
                     artnft={artnft} 
                     account={account}
                   />} 
+                />
+                <Route path="/whiteList" element={
+                  <WhiteList
+                    provider={provider}
+                    artnft={artnft}
+                    //whtList={whtList}
+                    account={account}
+                  />}
                 />
               </Routes>
             </HashRouter>

@@ -6,6 +6,7 @@
 // global scope, and execute the script.
 const hre = require("hardhat");
 const fs = require("fs");
+const { markAsUntransferable } = require("worker_threads");
 
 async function main() {
   const NAME = 'Soleplex'
@@ -23,12 +24,26 @@ async function main() {
       consumer = accounts[3]
     
 
-  // Deploy Token
+  // Deploy Marketplace 
   const ArtistContract = await hre.ethers.getContractFactory('ArtistMarketplace')
   let artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
 
   await artistContract.deployed()
   console.log(`ArtistMarketplace deployed to: ${artistContract.address}\n`)
+
+  // Deploy Functions
+  //const ArtistFunctions = await hre.ethers.getContractFactory('MarketplaceFunctions')
+  //let artistFunctions = await ArtistFunctions.deploy()
+
+  //await artistFunctions.deployed()
+  //console.log(`MarketplaceFunctions deployed to: ${artistFunctions.address}\n`)
+
+  // Deploy White list
+  //const ArtistWhtList = await hre.ethers.getContractFactory('ArtistWhiteList')
+  //let artistWhhtList = await ArtistWhtList.deploy()
+
+  //await artistWhhtList.deployed()
+  //console.log(`ArtistWhiteList deployed to: ${artistWhhtList.address}\n`)
 
   const abiData = {
     abi: JSON.parse(artistContract.interface.format('json'))

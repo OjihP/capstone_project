@@ -1,178 +1,66 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
+
+import "./ArtistWhiteList.sol";
+import "./ContractData.sol";
+import "./ListedToken.sol";
+import "./IMarketFunctions.sol";
+import "./MarketplaceFunctions.sol";
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/Counters.sol"; // Safe and secure implementation of a counter in solidity. Can help track # of items sold in a marketplace
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol"; // Helps store the token URI. The token URI is the URL in which the metatdata for the NFT is located
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArtistMarketplace is ERC721URIStorage, Ownable {
-    using Strings for uint256;
-
-    address payable contractCreator;
-    address private artist;
-
-    using Counters for Counters.Counter; // get the counter implementation from 'Counters.sol'
-    // _tokenIds variable has the most recent minted tokenId
-    Counters.Counter private _tokenIds;
-    // Keeps track of the number of items sold on the marketplace
-    Counters.Counter private _itemsSold;
-
-    // The fee charged by the marketplace to be allowed to list an NFT
-    uint256 listPrice = 0.01 ether;
-
-    // The structure to store info about a listed token
-    struct ListedToken {
-        uint256 tokenId;
-        string nftName;
-        address creatorAddress;
-        address payable ownerAddress;
-        address payable sellerAddress;
-        uint256 priceOfNFT;
-        string[] fileNames;
-        string[] fileTypes;
-        string[] tokenCIDs;
-        bool currentlyListed;
-    }
-
-    // the event emitted when a token is successfully listed
-    event TokenListedSuccess (
-        uint256 indexed tokenId,
-        string nftName,
-        address creatorAddress,
-        address ownerAddress,
-        address sellerAddress,
-        uint256 priceOfNFT,
-        string[] fileNames,
-        string[] fileTypes,
-        string[] tokenCIDs,
-        bool currentlyListed
-    );
-
-    // This mapping maps tokenId to token info and is helpful when retrieving details about a tokenId
-    mapping(uint256 => ListedToken) private idToListedToken;
-    // 
-    mapping(address => bool) public whiteList;
-
+contract ArtistMarketplace is ArtistWhiteList, ContractData, MarketplaceFunctions,  ERC721, Ownable {
+    using Counters for Counters.Counter;
+    
     constructor(string memory _name, string memory _symbol, address _artist) ERC721(_name, _symbol) {
         contractCreator = payable(msg.sender);
         artist = _artist;
-        whiteList[artist] = true;
+        addToWhtList(_artist, "Artist"); // Add artist to the white list with a predefined name
     }
+
+    // This mapping maps tokenId to token info and is helpful when retrieving details about a tokenId
+    //mapping(uint256 => ListedToken) internal idToListedToken;
 
     modifier onlyWhtListed() {
-        require(whiteList[msg.sender] == true, "User is not whitelisted");
+        require(whiteList[msg.sender].isListed == true, "User is not white listed");
         _;
-    }
-
-    // Sub Functions
-
-    function updateListPrice(uint256 _listPrice) public payable {
-        require(contractCreator == msg.sender, "Only contract creator can update the listing price");
-        listPrice = _listPrice;
-    }
-
-    function getCreatorAddress() public view returns (address) {
-        return contractCreator;
-    }
-
-    function getArtistAddress() public view returns (address) {
-        return artist;
-    }
-
-    function getListPrice() public view returns (uint256) {
-        return listPrice;
-    }
-
-    /*function getLatestIdToListedToken() public view returns (ListedToken memory) {
-        uint256 currentTokenId = _tokenIds.current();
-        return idToListedToken[currentTokenId];
-    }*/
-
-    function getListedForTokenId(uint256 tokenId) public view returns (ListedToken memory) {
-        return idToListedToken[tokenId];
-    }
-
-    function getTokenIdFromListedToken(uint256 tokenId) public view returns (uint256) {
-        return idToListedToken[tokenId].tokenId;
-    }
-
-    function getNFTNameFromListedToken(uint256 tokenId) public view returns (string memory) {
-        return idToListedToken[tokenId].nftName;
-    }
-
-    function getFileNamesFromListedToken(uint256 tokenId) public view returns (string[] memory) {
-        return idToListedToken[tokenId].fileNames;
-    }
-
-    function getFileTypesFromListedToken(uint256 tokenId) public view returns (string[] memory) {
-        return idToListedToken[tokenId].fileTypes;
-    }
-
-    function getTokenCIDsFromListedToken(uint256 tokenId) public view returns (string[] memory) {
-        return idToListedToken[tokenId].tokenCIDs;
-    }
-
-
-    function getTokenIdsFromListedToken() public view returns (uint256[] memory) {
-        uint nftCount = _tokenIds.current();
-        uint256[] memory tokenIds = new uint256[](nftCount);
-        uint256 currentId;
-        uint256 currentIndex;
-   
-        for(uint i = 0; i < nftCount; i++)
-        {
-            currentId = i + 1;
-            tokenIds[currentIndex] = idToListedToken[currentId].tokenId;
-            currentIndex += 1;
-        }
-
-        return tokenIds;
-    }
-
-    function getTokenPriceFromListedToken(uint256 tokenId) public view returns (uint256) {
-        return idToListedToken[tokenId].priceOfNFT;
-    }
-
-    function getCurrentToken() public view returns (uint256) {
-        return _tokenIds.current();
-    }
-
-    function addToWhtList(address _user) public {
-        whiteList[_user] = true;
-    }
-
-    function removeFromWhtList(address _user) public {
-        whiteList[_user] = false;
     }
 
     // Main Functions
 
     // The first time a token is created, it is listed here
     function createToken(
+        uint256 _mintAmount,
         string memory _nftName, 
         uint256 price, 
         string[] memory _fileNames, 
         string[] memory _fileTypes, 
         string[] memory _tokenCIDs 
-        ) public payable onlyWhtListed returns (uint) {
+        ) public payable onlyWhtListed() returns (uint) {
         // Increment the tokenId counter, which is keeping track of the number of minted NFTs
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
 
-        // Mint the NFT with tokenId newTokenId to the address who called createToken
-        _safeMint(msg.sender, newTokenId);
+        // Must mint at least 1 token
+        require(_mintAmount > 0, "Must mint at least 1 token");
 
+        // Require enough payment
+        require(msg.value >= listPrice * _mintAmount, "Invalid cost");
+
+        _safeMint(msg.sender, newTokenId);
+        
         // Helper function to update Global variables and emit an event
-        createListedToken(newTokenId, _nftName, price, _fileNames, _fileTypes, _tokenCIDs);
+        createListedToken(_mintAmount, newTokenId, _nftName, price, _fileNames, _fileTypes, _tokenCIDs);
 
         return newTokenId;
     }
 
     // Helps create the object of type ListedToken for the NFT and update the idToListedToken mapping
     function createListedToken(
+        uint256 mintAmount,
         uint256 tokenId, 
         string memory _nftName, 
         uint256 price, 
@@ -181,12 +69,13 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         string[] memory _tokenCIDs
         ) private {
         // Make sure the sender sent enough ETH to pay for listing
-        require(msg.value == listPrice, "Please send the correct price");
+        require(msg.value == listPrice * mintAmount, "Please send the correct price");
         // Just sanity check
         require(price > 0, "Make sure the price isn't negative");
 
         // Update the mapping of tokenId's to Token details, useful for retrieval functions
         idToListedToken[tokenId] = ListedToken(
+            mintAmount,
             tokenId,
             _nftName,
             msg.sender,
@@ -218,7 +107,7 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
     }
     
     // This will return all the NFTs currently listed to be sold on the marketplace
-    function getAllNFTs() public view returns (ListedToken[] memory) {
+    /*function getAllNFTs() public view returns (ListedToken[] memory) {
         uint nftCount = _tokenIds.current();
         ListedToken[] memory tokens = new ListedToken[](nftCount);
         uint currentIndex = 0;
@@ -234,7 +123,7 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         }
         // the array 'tokens' has the list of all NFTs in the marketplace
         return tokens;
-    }
+    }*/
     
     // Returns all the tokenIds that the current user has
     function getMyIds(address _owner) public view returns (uint256[] memory) {
@@ -276,16 +165,29 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
     }
 
     // the function that executes the sale on the marketplace
-    function executeSale(uint256 tokenId) public payable {
+    function executeSale(uint256 tokenId, uint256 purchaseAmount) public payable {
+        uint _mintAmount = idToListedToken[tokenId].mintAmount;
         uint price = idToListedToken[tokenId].priceOfNFT;
         address seller = idToListedToken[tokenId].sellerAddress;
-        require(msg.value == price, "Please submit the asking price in order to complete the purchase");
+        require(msg.value == price * purchaseAmount, "Please submit the asking price in order to complete the purchase");
 
-        // update the details of the token
+        // Ensure _mintAmount is greater than 0 before decrementing
+        require(_mintAmount >= purchaseAmount, "No remaining tokens to sell");
+
+        // Decrease the mint amount
+        _mintAmount -= purchaseAmount;
+
+        // Update the details of the token
+        idToListedToken[tokenId].mintAmount = _mintAmount;
         idToListedToken[tokenId].currentlyListed = true; // extend the functionally...
         idToListedToken[tokenId].ownerAddress = payable(msg.sender);
         idToListedToken[tokenId].sellerAddress = payable(msg.sender);
         _itemsSold.increment();
+
+        // Set currentlyListed to false if _mintAmount reaches 0
+        if (_mintAmount == 0) {
+            idToListedToken[tokenId].currentlyListed = false;
+        }
 
         // Actually transfer the token to the new owner
         _transfer(address(this), msg.sender, tokenId);
@@ -293,7 +195,7 @@ contract ArtistMarketplace is ERC721URIStorage, Ownable {
         approve(address(this), tokenId);
 
         // Transfer the listing fee to the marketplace creator
-        payable(contractCreator).transfer(listPrice);
+        payable(contractCreator).transfer(listPrice * purchaseAmount);
         // Transfer the proceeds from the sale to the seller of the NFT
         payable(seller).transfer(msg.value);
     }

@@ -15,6 +15,7 @@ const Mint = ({ provider, artnft, account }) => {
     const [files, setFiles] = useState(null)
     const [price, setPrice] = useState(null)
     const [name, setName] = useState('')
+    const [mintAmount, setMintAmount] = useState(null)
     const [description, setDescription] = useState('')
     const [_fileItemArray, setFileItemArray] = useState([])
 
@@ -98,10 +99,6 @@ const Mint = ({ provider, artnft, account }) => {
       }
     }
 
-    const loadFileItems = async () => {
-      
-    }
-
     const mintHandler = async () => {
       const _nftName = _fileItemArray.map(item => item.nftName)
       const _fileNames = _fileItemArray.map(item => item. fileName)
@@ -117,7 +114,7 @@ const Mint = ({ provider, artnft, account }) => {
       try {
         const signer = await provider.getSigner()
 
-        const transaction = await artnft.connect(signer).createToken(_nftName.toString(), toWei(price).toString(), _fileNames, _fileTypes, _tokenCIDs, { value: toWei(0.01) })
+        const transaction = await artnft.connect(signer).createToken(mintAmount, _nftName.toString(), toWei(price).toString(), _fileNames, _fileTypes, _tokenCIDs, { value: toWei(0.01).mul(mintAmount) })
         await transaction.wait()
 
       } catch (error) {
@@ -155,7 +152,7 @@ const Mint = ({ provider, artnft, account }) => {
                   
                 </div>
                 <div className='text-center'><p><strong>Create NFT</strong></p></div>
-                <Form.Control onChange={(e) => setName(e.target.value)} size="lg" required type="text" placeholder="Name of NFT" />
+                <Form.Control onChange={(e) => setMintAmount(e.target.value)} size="lg" required type="text" placeholder="Amount of NFTs to be minted" />
                 <Form.Control onChange={(e) => setDescription(e.target.value)} size="lg" required as="textarea" placeholder="Description" />
                 <Form.Control onChange={(e) => setPrice(e.target.value)} size="lg" required type="number" placeholder="Price in ETH" />
                 <div className="d-grid px-0">
