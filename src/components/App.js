@@ -11,8 +11,10 @@ import About from './About.js';
 import Contact from './Contact.js';
 import Donate from './Donate.js';
 import NFTShop from './NFTShop.js';
+import MyNFTs from './MyNFTs.js';
 import Mint from './Mint.js';
 import WhiteList from './WhiteList.js';
+import Funds from './Funds.js'
 
 // ABIs: Import your contract ABIs here
 import ARTNFT_ABI from '../abis/ArtistContract.json'
@@ -85,9 +87,10 @@ function App() {
   }
   
   const listenToEvent = async () => {
-      artnft.on("TokenListedSuccess", (tokenId, creator, owner, seller, price, assetURIs, currentlyListed) => {
+      artnft.on("TokenListedSuccess", (tokenId, nftName, creator, owner, seller, price, assetURIs, currentlyListed) => {
         let data = {
           tokenId: tokenId.toString(), 
+          nftName,
           creator, 
           price: fromWei(price.toString()),
         }
@@ -101,10 +104,12 @@ function App() {
         const event = artnft.interface.parseLog(log)
 
         const tokenId = event.args[0]
-        const creator = event.args[1]
-        const price = event.args[4]
+        const nftName = event.args[1]
+        const creator = event.args[2]
+        const price = event.args[5]
 
         console.log('tokenId: ', tokenId.toString())
+        console.log('NFT Name: ', nftName)
         console.log('Creator: ', creator)
         console.log('Price: ', fromWei(price.toString()))
       })
@@ -126,20 +131,31 @@ function App() {
                 account={account} 
                 listenToEvent={listenToEvent}
                 artnft={artnft}
-                //func={funcs}
-                //whtList={whtList} 
               />
               <Routes>
                 <Route path="/" />
                 <Route path="/about" />
                 <Route path="/contact" />
-                <Route path="/donate" />
+                <Route path="/donate" element={
+                  <Donate
+                    provider={provider}
+                    artnft={artnft}
+                    account={account}
+                   />}
+                />
                 <Route path="/nftshop" element={
                   <NFTShop 
                     provider={provider}
                     artnft={artnft}
                     account={account}
                   />} 
+                />
+                <Route path="/myNFTs" element={
+                  <MyNFTs
+                    provider={provider}
+                    artnft={artnft}
+                    account={account}
+                  />}
                 />
                 <Route path="/mint" element={
                   <Mint 
@@ -156,12 +172,16 @@ function App() {
                     account={account}
                   />}
                 />
+                <Route path="/funds" element={
+                  <Funds
+                    provider={provider} 
+                    artnft={artnft}
+                    account={account}
+                  />} 
+                />
               </Routes>
             </HashRouter>
     </Container>
-
-    
-    
   )
 }
 

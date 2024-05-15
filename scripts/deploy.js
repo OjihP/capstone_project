@@ -6,7 +6,6 @@
 // global scope, and execute the script.
 const hre = require("hardhat");
 const fs = require("fs");
-const { markAsUntransferable } = require("worker_threads");
 
 async function main() {
   const NAME = 'Soleplex'

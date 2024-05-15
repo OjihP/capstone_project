@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import { Row, Form, Button, Table, Container } from 'react-bootstrap';
 
 const WhiteList = ({ provider, artnft, whtList, account }) => {
-    const [usersOnWhtList, setUsersWhtListed] = useState([])
+    const [_usersOnWhtList, setUsersWhtListed] = useState([])
     const [userAddress, setUserAddress] = useState([])
     const [userName, setUserName] = useState([])
 
@@ -31,7 +31,27 @@ const WhiteList = ({ provider, artnft, whtList, account }) => {
         //const usersOnWhtList = await whtList.connect(signer).getAllUsersOnWhiteList()
         //console.log(usersOnWhtList)
 
-        const whiteListIndex = await artnft.connect(signer).getUserNumbersOnWhiteList()
+        //const whiteListIndex = await artnft.connect(signer).getUserNumbersOnWhiteList()
+        //console.log("Whitelist Index: ", whiteListIndex.toString())
+
+        const count = await artnft._numbers()
+        const items = []
+
+        /*for(var i = 0; i < count; i++) {
+            const userInfo = await artnft.whtList(i + 1)
+            items.push(userInfo)
+        }*/
+
+        for(var i = 0; i < count; i++) {
+            const userInfo = await artnft.whtList(i + 1)
+            items.push(userInfo.userNumber)
+        }
+
+        console.log(items.toString())
+
+        //const usersOnWhtList = await artnft.connect(signer).getAllUsersOnWhiteList()
+        //console.log(usersOnWhtList)
+        const whiteListIndex = items
         console.log("Whitelist Index: ", whiteListIndex.toString())
 
         const whtListedUsers = whiteListIndex.map(async (num) => {
@@ -44,20 +64,6 @@ const WhiteList = ({ provider, artnft, whtList, account }) => {
         console.log("Users Whitelisted: ", usersWhtListed)
         
         setUsersWhtListed(usersWhtListed)
-    }
-
-    const searchUserByAddress = async () => {
-        const signer = await provider.getSigner()
-
-        const userInfo = await artnft.connect(signer).getUserByAddress(userName)
-        console.log(userInfo)
-    }
-
-    const searchUserByName = async () => {
-        const signer = await provider.getSigner()
-
-        const userInfo = await artnft.connect(signer).getUserByName(userName)
-        console.log(userInfo)
     }
 
     useEffect(() => {
@@ -77,7 +83,7 @@ const WhiteList = ({ provider, artnft, whtList, account }) => {
                         </tr>
                     </thead>
                     <tbody>
-                       {usersOnWhtList.map((info, index) => (
+                       {_usersOnWhtList.map((info, index) => (
                         <tr key={index}>
                             <td>{info.userNumber.toString()}</td>
                             <td>{info.nameForAddress}</td>
@@ -99,21 +105,9 @@ const WhiteList = ({ provider, artnft, whtList, account }) => {
                     <Button onClick={removeUserFromWhiteList} variant="primary" size="lg">
                             Remove from White List
                     </Button>
-                <p><strong>Search by Address</strong></p>
-                    <Form.Control onChange={(e) => setUserAddress(e.target.value)} size="lg" required type="text" placeholder="Type or paste user address here" />
-                    <Button onClick={searchUserByAddress} variant="primary" size="lg">
-                             Search
-                    </Button>
-                <p><strong>Search by Username</strong></p>
-                    <Form.Control onChange={(e) => setUserName(e.target.value)} size="lg" required type="text" placeholder="Type or paste username here" />
-                    <Button onClick={searchUserByName} variant="primary" size="lg">
-                            Search
-                    </Button>
             </div>
         </div>
     )
-
-
 }
 
 export default WhiteList;

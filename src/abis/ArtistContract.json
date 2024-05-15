@@ -74,19 +74,44 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "name": "Finalize",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
         "internalType": "address",
-        "name": "previousOwner",
+        "name": "recipient",
         "type": "address"
       },
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
-        "name": "newOwner",
+        "name": "creator",
         "type": "address"
       }
     ],
-    "name": "OwnershipTransferred",
+    "name": "Propose",
     "type": "event"
   },
   {
@@ -182,6 +207,38 @@
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "investor",
+        "type": "address"
+      }
+    ],
+    "name": "Vote",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "_numbers",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "_value",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -240,6 +297,39 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_description",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address payable",
+        "name": "_recipient",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_recipientBalance",
+        "type": "uint256"
+      }
+    ],
+    "name": "createProposal",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -305,6 +395,19 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      }
+    ],
+    "name": "finalizeProposal",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "getAllUsersOnWhiteList",
     "outputs": [
@@ -359,6 +462,121 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getArtistAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getCreatorAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getListPrice",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getListedFromTokenId",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "mintAmount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "nftName",
+            "type": "string"
+          },
+          {
+            "internalType": "address",
+            "name": "creatorAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "address payable",
+            "name": "ownerAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "address payable",
+            "name": "sellerAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "priceOfNFT",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string[]",
+            "name": "fileNames",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string[]",
+            "name": "fileTypes",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string[]",
+            "name": "tokenCIDs",
+            "type": "string[]"
+          },
+          {
+            "internalType": "bool",
+            "name": "currentlyListed",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct ListedToken",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -378,82 +596,13 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_user",
-        "type": "address"
-      }
-    ],
-    "name": "getUserByAddress",
+    "inputs": [],
+    "name": "getTokenIdsFromListedToken",
     "outputs": [
       {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "userNumber",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "userAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "string",
-            "name": "nameForAddress",
-            "type": "string"
-          },
-          {
-            "internalType": "bool",
-            "name": "isListed",
-            "type": "bool"
-          }
-        ],
-        "internalType": "struct ArtistWhiteList.UserInfo",
+        "internalType": "uint256[]",
         "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_name",
-        "type": "string"
-      }
-    ],
-    "name": "getUserByName",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "userNumber",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "userAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "string",
-            "name": "nameForAddress",
-            "type": "string"
-          },
-          {
-            "internalType": "bool",
-            "name": "isListed",
-            "type": "bool"
-          }
-        ],
-        "internalType": "struct ArtistWhiteList.UserInfo",
-        "name": "",
-        "type": "tuple"
+        "type": "uint256[]"
       }
     ],
     "stateMutability": "view",
@@ -501,19 +650,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "getUserNumbersOnWhiteList",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -551,19 +687,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -583,21 +706,94 @@
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "proposalCount",
+    "outputs": [
       {
-        "internalType": "address",
-        "name": "_user",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
-    "name": "removeFromWhtList",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "proposals",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "description",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address payable",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "recipientBalance",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "votes",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "finalized",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "renounceOwnership",
+    "name": "quorum",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_user",
+        "type": "uint256"
+      }
+    ],
+    "name": "removeFromWhtList",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -748,12 +944,25 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "_listPrice",
+        "type": "uint256"
       }
     ],
-    "name": "transferOwnership",
+    "name": "updateListPrice",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      }
+    ],
+    "name": "voteUp",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -800,15 +1009,34 @@
         "type": "uint256"
       }
     ],
-    "name": "whiteListUserNumbers",
+    "name": "whtList",
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "userNumber",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "nameForAddress",
+        "type": "string"
+      },
+      {
+        "internalType": "bool",
+        "name": "isListed",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
   }
 ]

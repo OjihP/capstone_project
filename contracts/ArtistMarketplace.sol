@@ -1,18 +1,18 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.9;
 
-import "./ArtistWhiteList.sol";
-import "./ContractData.sol";
-import "./ListedToken.sol";
-import "./IMarketFunctions.sol";
+//import "./ArtistWhiteList.sol";
+//import "./ContractData.sol";
+//import "./ListedToken.sol";
 import "./MarketplaceFunctions.sol";
+import "./Proposals.sol";
 
 import "hardhat/console.sol";
-import "@openzeppelin/contracts/utils/Counters.sol"; // Safe and secure implementation of a counter in solidity. Can help track # of items sold in a marketplace
+//import "@openzeppelin/contracts/utils/Counters.sol"; // Safe and secure implementation of a counter in solidity. Can help track # of items sold in a marketplace
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+//import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArtistMarketplace is ArtistWhiteList, ContractData, MarketplaceFunctions,  ERC721, Ownable {
+contract ArtistMarketplace is MarketplaceFunctions, Proposals, ERC721 {
     using Counters for Counters.Counter;
     
     constructor(string memory _name, string memory _symbol, address _artist) ERC721(_name, _symbol) {
@@ -199,4 +199,14 @@ contract ArtistMarketplace is ArtistWhiteList, ContractData, MarketplaceFunction
         // Transfer the proceeds from the sale to the seller of the NFT
         payable(seller).transfer(msg.value);
     }
+
+    // Function to receive funds
+    receive() external payable {
+        // Check that the address has enough funds for donation
+    }
+
+    // Function to transfer funds to another address
+    /*function transferFunds(address payable recipient, uint amount) onlyWhtListed external {
+        recipient.transfer(amount);
+    }*/
 }

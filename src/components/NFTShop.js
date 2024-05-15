@@ -24,39 +24,39 @@ const NFTShop = ({ provider, artnft, account }) => {
                 console.log("Ids: ", Ids.toString())
 
                 const nftNames = Ids.map(async (tokenId) => {
-                    const tokenName = await artnft.connect(signer).getNFTNameFromListedToken(tokenId)
-                    console.log("Token Name: ", tokenName)
-                    return tokenName
+                    const tokenName = await artnft.connect(signer).getListedFromTokenId(tokenId)
+                    console.log("Token Name: ", tokenName.nftName)
+                    return tokenName.nftName
                 })
                
                 const CIDs = Ids.map(async (tokenId) => {
-                    const tokenCID = await artnft.connect(signer).getTokenCIDsFromListedToken(tokenId)
-                    console.log("Token CID: ", tokenCID)
-                    return tokenCID
+                    const tokenCID = await artnft.connect(signer).getListedFromTokenId(tokenId)
+                    console.log("Token CID: ", tokenCID.tokenCIDs)
+                    return tokenCID.tokenCIDs
                 }) 
 
                 const fileTypes = Ids.map(async (tokenId) => {
-                    const tokenFileType = await artnft.connect(signer).getFileTypesFromListedToken(tokenId)
-                    console.log("File Types within Token: ", tokenFileType)
-                    return tokenFileType
+                    const tokenFileType = await artnft.connect(signer).getListedFromTokenId(tokenId)
+                    console.log("File Types within Token: ", tokenFileType.fileTypes)
+                    return tokenFileType.fileTypes
                 })
 
                 const prices = Ids.map(async (tokenId) => {
-                    const tokenPrice = await artnft.connect(signer).getTokenPriceFromListedToken(tokenId)
-                    console.log("Token Price", tokenPrice.toString())
-                    return tokenPrice.toString()
+                    const tokenPrice = await artnft.connect(signer).getListedFromTokenId(tokenId)
+                    console.log("Token Price", tokenPrice.priceOfNFT.toString())
+                    return tokenPrice.priceOfNFT.toString()
                 })
 
                 const mintAmounts = Ids.map(async (tokenId) => {
-                    const tokenAmount = await artnft.connect(signer).getMintAmountFromTokenId(tokenId)
-                    console.log("Token Amount", tokenAmount)
-                    return tokenAmount
+                    const tokenAmount = await artnft.connect(signer).getListedFromTokenId(tokenId)
+                    console.log("Token Amount", tokenAmount.mintAmount)
+                    return tokenAmount.mintAmount
                 })
 
                 const currentlyListed = Ids.map(async (tokenId) => {
-                    const listedStatus = await artnft.connect(signer).getCurrentlyListedFromListedToken(tokenId)
-                    console.log("Listed Status: ", listedStatus)
-                    return listedStatus
+                    const listedStatus = await artnft.connect(signer).getListedFromTokenId(tokenId)
+                    console.log("Listed Status: ", listedStatus.currentlyListed)
+                    return listedStatus.currentlyListed
                 })
 
                 const tokenNames = await Promise.all(nftNames)
@@ -93,25 +93,6 @@ const NFTShop = ({ provider, artnft, account }) => {
             }
         }
 
-        const getMyNFTs = async () => {
-            const signer = await provider.getSigner()
-            const myIds = await artnft.connect(signer).getMyIds(account)
-            console.log("myIds: ", myIds.toString())
-            const myURIs = myIds.map(async (tokenId) => {
-                const tokenURI = await artnft.connect(signer).getTokenURI(tokenId)
-                console.log("Token URI", tokenURI)
-                return tokenURI 
-            }) 
-
-            const myTokenURIs = await Promise.all(myURIs)
-            console.log("URIs: ", myURIs)
-
-            //setMyURIs(myTokenURIs)
-            //console.log(myListedURIs)
-            const listedStruct = await artnft.getListedForTokenId(1)
-            console.log('listedTokenStruct: ', listedStruct)
-        }
-
         const buyNFT = async (index) => {
             try {
                 const tokenId = index + 1
@@ -120,7 +101,7 @@ const NFTShop = ({ provider, artnft, account }) => {
                 const signer = await provider.getSigner()
                 console.log(ethers.BigNumber.from(listedPrice[index]).mul(purchaseAmount))
                 await artnft.connect(signer).executeSale(tokenId, purchaseAmount, { value: ethers.BigNumber.from(listedPrice[index]).mul(purchaseAmount) })
-                const sale = await artnft.getListedForTokenId(tokenId)
+                const sale = await artnft.getListedFromTokenId(tokenId)
                 console.log('Creator of NFT: ', sale.creator)
                 console.log('Owner of NFT: ', sale.owner)
                 console.log('Seller of NFT: ', sale.seller)
@@ -132,28 +113,10 @@ const NFTShop = ({ provider, artnft, account }) => {
 
     useEffect(() => {
         loadAllNFTs()
-        //getMyNFTs()
     }, []);
 
     return (
         <div className='text-center'>
-            <p><strong>MY NFTs</strong></p>
-            <div className="px-5 py-3 container">
-                <Row xs={1} md={2} lg={4} className="g-4 py-3">
-                    {listedCIDs.map((uri, index) => (
-                    <Col key={index} className="overflow-hidden">
-                        <Card style={{ width: "50px" }}>
-                            <Card.Img 
-                             variant="top" 
-                             src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`} 
-                             height="50px"
-                             width="50px"
-                            />
-                        </Card>
-                    </Col>
-                ))}
-                </Row>
-            </div>
             <p><strong>NFT Shop</strong></p>
             <div className="px-5 py-3 container">
                 <Row xs={1} md={2} lg={4} className="g-4 py-3">

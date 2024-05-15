@@ -5,7 +5,7 @@ import Dropdown from 'react-bootstrap/Dropdown';
 import DropdownButton from 'react-bootstrap/DropdownButton';
 import logo from '../logo.png';
 
-const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, listenToEvent, artnft, funcs, whtList }) => {
+const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, listenToEvent, artnft }) => {
   const [isWhitelisted, setIsWhitelisted] = useState(false)
 
   const getWhiteListedUsers = async () => {
@@ -65,7 +65,10 @@ useEffect(() => {
                   <Dropdown.Item onClick={web3Handler}>Connect Wallet</Dropdown.Item>
                 )}
               </Dropdown.Item>
-              {account && (
+              {(account) && (!isWhitelisted) && (
+                <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/MyNFTs" style={{ color: 'black' }}>My NFTs</Nav.Link></Dropdown.Item>
+              )}
+              {(account) && (!isWhitelisted) && ( 
                 <Dropdown.Item className='text-center' onClick={listenToEvent}>Listen To Events</Dropdown.Item> 
               )}
               {(isWhitelisted) && (

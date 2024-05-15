@@ -8,7 +8,7 @@ contract ArtistWhiteList {
     using Strings for string;
     using Counters for Counters.Counter;
 
-    Counters.Counter private _numbers;
+    Counters.Counter public _numbers;
 
     struct UserInfo {
         uint256 userNumber;
@@ -20,9 +20,9 @@ contract ArtistWhiteList {
     // Mapping to store whether an address is in the white list
     mapping(address => UserInfo) public whiteList;
     //
-    mapping(uint256 => UserInfo) private whtList;
+    mapping(uint256 => UserInfo) public whtList;
     // To keep track of numbers assigned to the user in the white list
-    uint256[] public whiteListUserNumbers; 
+    //uint256[] public whiteListUserNumbers; 
 
     function addToWhtList(address _user, string memory _name) public returns(uint) {
         _numbers.increment();
@@ -30,35 +30,42 @@ contract ArtistWhiteList {
 
         whiteList[_user] = UserInfo(newNumber, _user, _name, true);
         whtList[newNumber] = UserInfo(newNumber, _user, _name, true);
-        whiteListUserNumbers.push(newNumber); // Add the user number to the array
+        //whiteListUserNumbers.push(newNumber); // Add the user number to the array
 
         return newNumber;
     }
 
-    /*function removeFromWhtList(address _user) public {
-        UserInfo memory user = getUserByAddress(_user);
-        delete whiteList[_user];
+    function removeFromWhtList(uint256 _user) public {
+        UserInfo memory user = getUserByNumber(_user);
+        delete whiteList[user.userAddress];
         delete whtList[user.userNumber];
-        delete whiteListUserNumbers[user.userNumber];
+        //delete whiteListUserNumbers[user.userNumber];
     }
 
-    function getUserByAddress(address _user) public view returns (UserInfo memory) {
+    /*function getUserByAddress(address _user) public view returns (UserInfo memory) {
         return whiteList[_user];
-    }
+    }*/
 
-    function getUserByName(string memory _name) public view returns (UserInfo memory) {
+    /*function getUserByName(string memory _name) public view returns (UserInfo memory) {
         for (uint256 i = 0; i < whiteListUserNumbers.length; i++) {
             if (whtList[whiteListUserNumbers[i]].nameForAddress.equal(_name)) {
                 return whtList[whiteListUserNumbers[i]];
             }
         }
         return UserInfo(0, address(0), "", false);
-    }
+    }*/
 
     function getAllUsersOnWhiteList() public view returns (UserInfo[] memory) {
-        UserInfo[] memory users = new UserInfo[](whiteListUserNumbers.length);
-        for (uint256 i = 0; i < whiteListUserNumbers.length; i++) {
-            users[i] = whtList[whiteListUserNumbers[i]];
+        uint256 userCount = _numbers.current();
+        UserInfo[] memory users = new UserInfo[](userCount);
+        uint256 currentId;
+        uint256 currentIndex;
+   
+        for(uint i = 0; i < userCount; i++)
+        {
+            currentId = i + 1;
+            users[currentIndex] = whtList[currentId];
+            currentIndex += 1;
         }
         return users;
     }
@@ -67,7 +74,7 @@ contract ArtistWhiteList {
         return whtList[num];
     }
 
-    function getUserNumbersOnWhiteList() public view returns (uint256[] memory) {
+    /*function getUserNumbersOnWhiteList() public view returns (uint256[] memory) {
         return whiteListUserNumbers;
     }*/
 }
