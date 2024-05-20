@@ -6,6 +6,7 @@ const WhiteList = ({ provider, artnft, whtList, account }) => {
     const [_usersOnWhtList, setUsersWhtListed] = useState([])
     const [userAddress, setUserAddress] = useState([])
     const [userName, setUserName] = useState([])
+    const [userNumber, setUserNumber] = useState('')
 
     const addUserToWhiteList = async () => {
         const signer = await provider.getSigner()
@@ -18,8 +19,9 @@ const WhiteList = ({ provider, artnft, whtList, account }) => {
 
     const removeUserFromWhiteList = async () => {
         const signer = await provider.getSigner()
+        console.log(userNumber)
 
-        const transaction = await artnft.connect(signer).removeFromWhtList(userAddress)
+        const transaction = await artnft.connect(signer).removeFromWhtList(userNumber)
         await transaction.wait()
 
         displayWhiteListedUsers()
@@ -73,7 +75,7 @@ const WhiteList = ({ provider, artnft, whtList, account }) => {
     return (
         <div className='text-center'>
             <p><strong>White List</strong></p>
-                <Table striped bordered hover responsive>
+                <Table striped bordered hover responsive variant="dark">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -101,7 +103,7 @@ const WhiteList = ({ provider, artnft, whtList, account }) => {
                             Add to White List
                     </Button>
                 <p><strong>Remove User from White List</strong></p>
-                    <Form.Control onChange={(e) => setUserAddress(e.target.value)} size="lg" required type="text" placeholder="Type or paste user address here" />
+                    <Form.Control onChange={(e) => setUserNumber(e.target.value)} size="lg" required type="number" placeholder="Type or paste user number here" />
                     <Button onClick={removeUserFromWhiteList} variant="primary" size="lg">
                             Remove from White List
                     </Button>

@@ -7,6 +7,7 @@ import logo from '../logo.png';
 
 const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, listenToEvent, artnft }) => {
   const [isWhitelisted, setIsWhitelisted] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const getWhiteListedUsers = async () => {
     setIsWhitelisted(false)
@@ -28,14 +29,30 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, listen
     } catch (error) {
       console.error('Error fetching whitelist:', error)
     }
-}
+  }
 
-useEffect(() => {
-  console.log(account)
-  console.log(isWhitelisted)
-  getWhiteListedUsers()
-  console.log("useEffect")
-}, [account]);
+  const getAdmin = async () => {
+    setIsAdmin(false)
+    try {
+      const signer = await provider.getSigner()
+
+      // Check if the current user's address is the Admin's address
+      const currentUserAddress = await signer.getAddress()
+      const adminAddress = await artnft.connect(signer).getCreatorAddress()
+      const isCreator = currentUserAddress === adminAddress
+      setIsAdmin(isCreator)
+    } catch (error) {
+      console.log('Error fetching Admin:', error)
+    }
+  }
+
+  useEffect(() => {
+    //console.log(account)
+    //console.log(isWhitelisted)
+    getWhiteListedUsers()
+    getAdmin()
+    //console.log("useEffect")
+  }, [account]);
 
   return (
     <Navbar expand="lg" bg="secondary" variant="dark">
@@ -80,7 +97,9 @@ useEffect(() => {
               {(isWhitelisted) && (
                 <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Funds" style={{ color: 'black' }}>Manage Funds</Nav.Link></Dropdown.Item>
               )}
-              
+              {(isAdmin) && (
+                <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Admin" style={{ color: 'black' }}>Admin Functions</Nav.Link></Dropdown.Item>
+              )}
             </DropdownButton>
             <Nav>
               {account ? (

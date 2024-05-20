@@ -15,6 +15,7 @@ import MyNFTs from './MyNFTs.js';
 import Mint from './Mint.js';
 import WhiteList from './WhiteList.js';
 import Funds from './Funds.js'
+import Admin from './Admin.js'
 
 // ABIs: Import your contract ABIs here
 import ARTNFT_ABI from '../abis/ArtistContract.json'
@@ -178,6 +179,13 @@ function App() {
                     artnft={artnft}
                     account={account}
                   />} 
+                />
+                <Route path="/admin" element={
+                  <Admin
+                    provider={provider}
+                    artnft={artnft}
+                    account={account} 
+                  />}
                 />
               </Routes>
             </HashRouter>

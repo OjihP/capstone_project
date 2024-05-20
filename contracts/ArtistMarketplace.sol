@@ -18,7 +18,7 @@ contract ArtistMarketplace is MarketplaceFunctions, Proposals, ERC721 {
     constructor(string memory _name, string memory _symbol, address _artist) ERC721(_name, _symbol) {
         contractCreator = payable(msg.sender);
         artist = _artist;
-        addToWhtList(_artist, "Artist"); // Add artist to the white list with a predefined name
+        //addToWhtList(_artist, "Artist"); // Add artist to the white list with a predefined name
     }
 
     // This mapping maps tokenId to token info and is helpful when retrieving details about a tokenId

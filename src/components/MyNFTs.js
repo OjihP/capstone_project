@@ -20,6 +20,7 @@ const MyNFTs = ({ provider, artnft, account }) => {
             const signer = await provider.getSigner()
             const myIds = await artnft.connect(signer).getMyIds(account)
             console.log("myIds: ", myIds.toString())
+            
             const myCIDs = myIds.map(async (tokenId) => {
                 const tokenCID = await artnft.connect(signer).getListedFromTokenId(tokenId)
                     console.log("Token CID: ", tokenCID.tokenCIDs)

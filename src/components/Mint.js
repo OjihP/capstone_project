@@ -82,7 +82,7 @@ const Mint = ({ provider, artnft, account }) => {
           fileItemArray.push(fileItem)
 
           const filteredArray = fileItemArray.filter(item => {
-            return item.nftName === name;
+            return item.tokenId === 1;
           })
 
         console.log("Filtered Array: ", filteredArray)

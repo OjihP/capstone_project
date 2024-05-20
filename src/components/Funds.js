@@ -157,7 +157,7 @@ const Funds = ({ provider, artnft, account }) => {
                 </Form>
             </div>
             <div>
-              <Table striped bordered hover responsive>
+              <Table striped bordered hover responsive variant="dark">
                 <thead>
                   <tr>
                     <th>#</th>

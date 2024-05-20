@@ -22,7 +22,7 @@ contract MarketplaceFunctions {
     Counters.Counter internal _itemsSold;
 
     // The fee charged by the marketplace to be allowed to list an NFT
-    uint256 listPrice = 0.01 ether;
+    uint256 listPrice;
 
     // This mapping maps tokenId to token info and is helpful when retrieving details about a tokenId
     mapping(uint256 => ListedToken) internal idToListedToken;
