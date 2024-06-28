@@ -4,7 +4,7 @@ import { Button, Form, Table, Spinner } from 'react-bootstrap';
 
 const toWei = (n) => ethers.utils.parseEther(n.toString())
 
-const Admin = ({ provider, artnft, account }) => {
+const Admin = ({ provider, artnft, whtList, pose, account }) => {
     const [userAddress, setUserAddress] = useState('')
     const [userName, setUserName] = useState('')
     const [initialName, setInitialName] = useState('')
@@ -15,10 +15,10 @@ const Admin = ({ provider, artnft, account }) => {
     const initializeArtist = async () => {
         const signer = await provider.getSigner()
 
-        const transaction = await artnft.connect(signer).addToWhtList(userAddress, userName)
+        const transaction = await whtList.connect(signer).addToWhtList(userAddress, userName)
         await transaction.wait()
 
-        const initializedInfo = await artnft.connect(signer).getUserByNumber(1)
+        const initializedInfo = await whtList.connect(signer).getUserByNumber(1)
         console.log(initializedInfo)
         console.log(initializedInfo.nameForAddress)
         console.log(initializedInfo.userAddress)

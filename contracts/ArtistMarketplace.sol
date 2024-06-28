@@ -1,203 +1,225 @@
-//SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.9;
 
+import "./ArtistMint.sol";
 //import "./ArtistWhiteList.sol";
-//import "./ContractData.sol";
-//import "./ListedToken.sol";
-import "./MarketplaceFunctions.sol";
-import "./Proposals.sol";
+//import "./Proposals.sol";
 
-import "hardhat/console.sol";
-//import "@openzeppelin/contracts/utils/Counters.sol"; // Safe and secure implementation of a counter in solidity. Can help track # of items sold in a marketplace
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-//import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArtistMarketplace is MarketplaceFunctions, Proposals, ERC721 {
+interface IERC1155Token {
+    function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data) external;
+    function burn(address from, uint256 id, uint256 amount) external;
+    function uri(uint256 tokenId) external view returns (string memory);
+}
+
+contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
+    using Strings for uint256;
     using Counters for Counters.Counter;
-    
-    constructor(string memory _name, string memory _symbol, address _artist) ERC721(_name, _symbol) {
+
+    address payable contractCreator;
+    address internal artist;
+    uint256 public currentTokenID = 0;
+    ArtistMint public tokenCall;
+
+    // Keeps track of the number of items sold on the marketplace
+    Counters.Counter public _itemsSold;
+
+    // The fee charged by the marketplace to be allowed to list an NFT
+    uint256 listPrice;
+
+    struct ListedToken {
+        uint256 supplyAmount;
+        uint256 tokenId;
+        string nftName;
+        string creatorName;
+        address creatorAddress;
+        address payable ownerAddress;
+        address payable sellerAddress;
+        uint256 priceOfNFT;
+        string[] fileNames;
+        string[] fileTypes;
+        string[] tokenCIDs;
+        bool currentlyListed;
+    }
+
+     // the event emitted when a token is successfully listed
+    event TokenListedSuccess (
+        uint256 supplyAmount,
+        uint256 indexed tokenId,
+        string nftName,
+        string creatorName,
+        address creatorAddress,
+        address ownerAddress,
+        address sellerAddress,
+        uint256 priceOfNFT,
+        string[] fileNames,
+        string[] fileTypes,
+        string[] tokenCIDs,
+        bool currentlyListed
+    );
+
+    // This mapping maps tokenId to token info and is helpful when retrieving details about a tokenId
+    mapping(uint256 => ListedToken) public idToListedToken;
+
+    constructor(address _artist) ERC721("ArtistMarketplace", "ARTM") {
         contractCreator = payable(msg.sender);
         artist = _artist;
         //addToWhtList(_artist, "Artist"); // Add artist to the white list with a predefined name
     }
 
-    // This mapping maps tokenId to token info and is helpful when retrieving details about a tokenId
-    //mapping(uint256 => ListedToken) internal idToListedToken;
-
-    modifier onlyWhtListed() {
-        require(whiteList[msg.sender].isListed == true, "User is not white listed");
-        _;
+    function setTokenCallAddress(address _tokenCallAddress) external onlyOwner {
+        tokenCall = ArtistMint(_tokenCallAddress);
     }
 
-    // Main Functions
-
-    // The first time a token is created, it is listed here
-    function createToken(
-        uint256 _mintAmount,
-        string memory _nftName, 
-        uint256 price, 
-        string[] memory _fileNames, 
-        string[] memory _fileTypes, 
-        string[] memory _tokenCIDs 
-        ) public payable onlyWhtListed() returns (uint) {
-        // Increment the tokenId counter, which is keeping track of the number of minted NFTs
-        _tokenIds.increment();
-        uint256 newTokenId = _tokenIds.current();
-
-        // Must mint at least 1 token
-        require(_mintAmount > 0, "Must mint at least 1 token");
-
-        // Require enough payment
-        require(msg.value >= listPrice * _mintAmount, "Invalid cost");
-
-        _safeMint(msg.sender, newTokenId);
-        
-        // Helper function to update Global variables and emit an event
-        createListedToken(_mintAmount, newTokenId, _nftName, price, _fileNames, _fileTypes, _tokenCIDs);
-
-        return newTokenId;
+    function getMarketplaceBalance() public view returns (uint256) {
+        return address(this).balance;
     }
 
-    // Helps create the object of type ListedToken for the NFT and update the idToListedToken mapping
+    function updateListPrice(uint256 _listPrice) public payable  {
+        require(contractCreator == msg.sender/*, "Only contract creator can update the listing price"*/);
+        listPrice = _listPrice;
+    }
+
+    function getCreatorAddress() public view  returns (address) {
+        return contractCreator;
+    }
+
+    function getArtistAddress() public view  returns (address) {
+        return artist;
+    }
+
+    function getListPrice() public view  returns (uint256) {
+        return listPrice;
+    }
+
+    function getListedFromTokenId(uint256 tokenId) public view returns (ListedToken memory) {
+        return idToListedToken[tokenId];
+    }
+
+    // Helper function to get ERC1155 tokens held by a user
+    function getUserERC1155Tokens(address user) external view returns (uint256[] memory) {
+        uint256 totalTokens = tokenCall.tokenSupply();
+        uint256[] memory userTokens = new uint256[](totalTokens);
+        uint256 index = 0;
+
+        for (uint256 i = 1; i <= totalTokens; i++) {
+            if (tokenCall.balanceOf(user, i) > 0) {
+                userTokens[index] = i;
+                index++;
+            }
+        }
+
+        // Resize the array to fit the number of tokens found
+        uint256[] memory result = new uint256[](index);
+        for (uint256 i = 0; i < index; i++) {
+            result[i] = userTokens[i];
+        }
+
+        return result;
+    }
+
+     // Helps create the object of type ListedToken for the NFT and update the idToListedToken mapping
     function createListedToken(
-        uint256 mintAmount,
         uint256 tokenId, 
         string memory _nftName, 
+        string memory _creatorName,
+        address _creatorAddress,
         uint256 price, 
         string[] memory _fileNames,
         string[] memory _fileTypes,
-        string[] memory _tokenCIDs
-        ) private {
+        string[] memory _tokenCIDs,
+        uint256 supplyAmount
+        ) payable public {
         // Make sure the sender sent enough ETH to pay for listing
-        require(msg.value == listPrice * mintAmount, "Please send the correct price");
+        //require(msg.value == listPrice * mintAmount, "Please send the correct price");
         // Just sanity check
         require(price > 0, "Make sure the price isn't negative");
 
         // Update the mapping of tokenId's to Token details, useful for retrieval functions
         idToListedToken[tokenId] = ListedToken(
-            mintAmount,
+            supplyAmount,
             tokenId,
             _nftName,
-            msg.sender,
+            _creatorName,
+            _creatorAddress,
             payable(address(this)),
-            payable(msg.sender),
+            payable(_creatorAddress),
             price,
             _fileNames,
             _fileTypes,
             _tokenCIDs,
             true
         );
-
-        // Transfers NFT ownership to smart contract. If the smart contract owns the NFT, it makes it easier to transfer the NFT. => (56:05)
-        _transfer(msg.sender, address(this), tokenId);
-
+    
         // Emit the event for successful transfer. The frontend parses this message and updates the end user
         emit TokenListedSuccess(
+            supplyAmount,
             tokenId,
             _nftName,
-            msg.sender,
+            _creatorName,
+            _creatorAddress,
             address(this),
-            msg.sender,
+            _creatorAddress,
             price,
             _fileNames,
             _fileTypes,
             _tokenCIDs,
             true
         );
-    }
-    
-    // This will return all the NFTs currently listed to be sold on the marketplace
-    /*function getAllNFTs() public view returns (ListedToken[] memory) {
-        uint nftCount = _tokenIds.current();
-        ListedToken[] memory tokens = new ListedToken[](nftCount);
-        uint currentIndex = 0;
-        uint currentId;
-        // at the moment currentlyListed is true for all, if it becomes false in the future we will 
-        // filter out currentlyListed == false over here
-        for(uint i = 0; i < nftCount; i++)
-        {
-            currentId = i + 1;
-            ListedToken storage currentItem = idToListedToken[currentId];
-            tokens[currentIndex] = currentItem;
-            currentIndex += 1;
-        }
-        // the array 'tokens' has the list of all NFTs in the marketplace
-        return tokens;
-    }*/
-    
-    // Returns all the tokenIds that the current user has
-    function getMyIds(address _owner) public view returns (uint256[] memory) {
-        uint256 ownerTokenCount = balanceOf(_owner);
-        uint256[] memory tokenIds = new uint256[](ownerTokenCount);
-        uint256 currentId;
-        uint256 currentIndex;
-   
-        for(uint i = 0; i < ownerTokenCount; i++)
-        {
-            currentId = i + 1;
-            tokenIds[currentIndex] = idToListedToken[currentId].tokenId;
-            currentIndex += 1;
-        }
-        /*uint totalItemCount = _tokenIds.current();
-        uint itemCount = 0;
-        uint currentIndex = 0;
-        uint currentId;
-        // Important to get a count of all the NFTs that belong to the user before we can make an array for them
-        for(uint i = 0; i < totalItemCount; i++)
-        {
-            if(idToListedToken[i + 1].owner == msg.sender || idToListedToken[i + 1].seller == msg.sender){
-                itemCount += 1;
-            }
-        }
-
-        // Once you have the count of relevant NFTs, create an array then store all the NFTs in it
-        ListedToken[] memory items = new ListedToken[](itemCount);
-        for(uint i = 0; i < totalItemCount; i++) {
-            if(idToListedToken[i + 1].owner == msg.sender || idToListedToken[i + 1].seller == msg.sender) {
-                currentId = i + 1;
-                ListedToken storage currentItem = idToListedToken[currentId];
-                items[currentIndex] = currentItem;
-                currentIndex += 1;
-            }
-        }
-        return items;*/
-        return tokenIds;
     }
 
     // the function that executes the sale on the marketplace
     function executeSale(uint256 tokenId, uint256 purchaseAmount) public payable {
-        uint _mintAmount = idToListedToken[tokenId].mintAmount;
+        uint _supplyAmount = idToListedToken[tokenId].supplyAmount;
         uint price = idToListedToken[tokenId].priceOfNFT;
         address seller = idToListedToken[tokenId].sellerAddress;
-        require(msg.value == price * purchaseAmount, "Please submit the asking price in order to complete the purchase");
+        //uint256[] memory ids;
+        //uint256[] memory amounts;
+        //address tokenOwner = idToListedToken[tokenId].ownerAddress;
+
+        // Check if the contract is approved to transfer the token on behalf of the seller
+        //require(tokenCall.isApprovedForAll(seller, address(this)), "Seller has not approved the marketplace");
+
+        require(msg.value >= price * purchaseAmount, "Please submit the asking price in order to complete the purchase");
 
         // Ensure _mintAmount is greater than 0 before decrementing
-        require(_mintAmount >= purchaseAmount, "No remaining tokens to sell");
+        require(_supplyAmount >= purchaseAmount, "No remaining tokens to sell");
 
+        for(uint256 i = 1; i <= purchaseAmount; i++){
+            // Actually transfer the token to the new owner
+            tokenCall.safeTransferFrom(address(this), msg.sender, tokenId, 1, "");
+        }
+        
         // Decrease the mint amount
-        _mintAmount -= purchaseAmount;
+        _supplyAmount -= purchaseAmount;
 
         // Update the details of the token
-        idToListedToken[tokenId].mintAmount = _mintAmount;
+        idToListedToken[tokenId].supplyAmount = _supplyAmount;
         idToListedToken[tokenId].currentlyListed = true; // extend the functionally...
         idToListedToken[tokenId].ownerAddress = payable(msg.sender);
         idToListedToken[tokenId].sellerAddress = payable(msg.sender);
-        _itemsSold.increment();
+        //_itemsSold.increment();
 
-        // Set currentlyListed to false if _mintAmount reaches 0
-        if (_mintAmount == 0) {
+        // Set currentlyListed to false if _supplyAmount reaches 0
+        if (_supplyAmount == 0) {
             idToListedToken[tokenId].currentlyListed = false;
         }
 
-        // Actually transfer the token to the new owner
-        _transfer(address(this), msg.sender, tokenId);
-        // approve the marketplace to sell NFTs on your behalf
-        approve(address(this), tokenId);
-
-        // Transfer the listing fee to the marketplace creator
-        payable(contractCreator).transfer(listPrice * purchaseAmount);
         // Transfer the proceeds from the sale to the seller of the NFT
         payable(seller).transfer(msg.value);
+    }
+
+     // Function to transfer funds to a specified address
+    function transferFunds(address payable _recipient, uint256 _amount) external {
+        require(address(this).balance >= _amount, "Insufficient balance in ArtistMarketplace");
+        (bool success, ) = _recipient.call{value: _amount}("");
+        require(success, "Transfer failed");
     }
 
     // Function to receive funds
@@ -205,8 +227,42 @@ contract ArtistMarketplace is MarketplaceFunctions, Proposals, ERC721 {
         // Check that the address has enough funds for donation
     }
 
-    // Function to transfer funds to another address
-    /*function transferFunds(address payable recipient, uint amount) onlyWhtListed external {
-        recipient.transfer(amount);
-    }*/
+    // Override required functions from parent contracts
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 amount) internal override(ERC721, ERC721Enumerable) {
+        super._beforeTokenTransfer(from, to, tokenId, amount);
+    }
+
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage, ERC721Enumerable) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+
+    // Implement IERC1155Receiver functions
+    function onERC1155Received(
+        address operator,
+        address from,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) external pure returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(
+        address operator,
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external pure returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
+    }
 }
+    

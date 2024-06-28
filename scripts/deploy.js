@@ -21,14 +21,45 @@ async function main() {
       artist1 = accounts[1]
       artist2 = accounts[2]
       consumer = accounts[3]
+
+  
     
 
   // Deploy Marketplace 
   const ArtistContract = await hre.ethers.getContractFactory('ArtistMarketplace')
-  let artistContract = await ArtistContract.deploy(NAME, SYMBOL, artist1.address)
+  let artistContract = await ArtistContract.deploy(artist1.address)
 
   await artistContract.deployed()
   console.log(`ArtistMarketplace deployed to: ${artistContract.address}\n`)
+
+  // Deploy ArtistWhiteList 
+  const ArtistWhiteList = await ethers.getContractFactory("ArtistWhiteList");
+  let artistWhiteList = await ArtistWhiteList.deploy();
+
+  await artistWhiteList.deployed();
+  console.log(`ArtistWhiteList deployed to: ${artistWhiteList.address}\n`)
+
+  // Deploy Proposals 
+  const ProposalsContract = await ethers.getContractFactory('Proposals')
+  let proposalsContract = await ProposalsContract.deploy(artistContract.address, artistWhiteList.address)
+
+  await proposalsContract.deployed()
+  console.log(`Proposals deployed to: ${proposalsContract.address}\n`)
+
+  // Deploy ArtistMint 
+  const ArtistMinter = await ethers.getContractFactory('ArtistMint')
+  let artistMinter = await ArtistMinter.deploy(artistContract.address)
+
+  await artistMinter.deployed()
+  console.log(`ArtistMinter deployed to: ${artistMinter.address}\n`)
+
+  // Set the ArtistMint address in ArtistMarketplace
+  await artistContract.setTokenCallAddress(artistMinter.address);
+
+  console.log("ArtistMint address set in ArtistMarketplace");
+
+  // Initialize quorum in the Proposals contract
+  await proposalsContract.initializeQuorum();
 
   // Deploy Functions
   //const ArtistFunctions = await hre.ethers.getContractFactory('MarketplaceFunctions')

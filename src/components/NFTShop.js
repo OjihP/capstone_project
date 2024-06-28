@@ -6,7 +6,7 @@ import ReactAudioPlayer from 'react-audio-player'
 const toWei = (n) => ethers.utils.parseEther(n.toString())
 const fromWei = (n) => ethers.utils.formatEther(n)
 
-const NFTShop = ({ provider, artnft, account }) => {
+const NFTShop = ({ provider, artnft, account, minter }) => {
    const [_nftNames, setTokenNames] = useState([])
    const [listedCIDs, setTokenCIDs] = useState([])
    const [listedPrice, setListedPrice] = useState([])
@@ -17,81 +17,84 @@ const NFTShop = ({ provider, artnft, account }) => {
    const [listedState, setListedState] = useState(true)
    //const [myListedURIs, setMyURIs] = useState([])
         
+        const base = async () => {
+            const signer = await provider.getSigner()
+
+            const supply = await artnft.connect(signer).totalSupply()
+            console.log("Total Supply: ", supply)
+            //console.log("Token of Owner By Index: ", tokenOfOwnerByIndex())
+            //console.log("Token By Index", tokenByIndex())
+        }
         const loadAllNFTs = async () => {
             try {
-                const signer = await provider.getSigner()
-                const Ids = await artnft.connect(signer).getTokenIdsFromListedToken()
-                console.log("Ids: ", Ids.toString())
+                const signer = await provider.getSigner();
+                const count = await minter._tokenIds();
+                const items = [];
 
-                const nftNames = Ids.map(async (tokenId) => {
-                    const tokenName = await artnft.connect(signer).getListedFromTokenId(tokenId)
-                    console.log("Token Name: ", tokenName.nftName)
-                    return tokenName.nftName
-                })
-               
-                const CIDs = Ids.map(async (tokenId) => {
-                    const tokenCID = await artnft.connect(signer).getListedFromTokenId(tokenId)
-                    console.log("Token CID: ", tokenCID.tokenCIDs)
-                    return tokenCID.tokenCIDs
-                }) 
+                console.log("Total tokens count:", count.toString());
 
-                const fileTypes = Ids.map(async (tokenId) => {
-                    const tokenFileType = await artnft.connect(signer).getListedFromTokenId(tokenId)
-                    console.log("File Types within Token: ", tokenFileType.fileTypes)
-                    return tokenFileType.fileTypes
-                })
+        
+                // Retrieve token IDs
+                /*for (let i = 0; i < count; i++) {
+                    const userInfo = await artnft.connect(signer).idToListedToken(i + 1);
+                    items.push(userInfo.tokenId);
+                }*/
 
-                const prices = Ids.map(async (tokenId) => {
-                    const tokenPrice = await artnft.connect(signer).getListedFromTokenId(tokenId)
-                    console.log("Token Price", tokenPrice.priceOfNFT.toString())
-                    return tokenPrice.priceOfNFT.toString()
-                })
-
-                const mintAmounts = Ids.map(async (tokenId) => {
-                    const tokenAmount = await artnft.connect(signer).getListedFromTokenId(tokenId)
-                    console.log("Token Amount", tokenAmount.mintAmount)
-                    return tokenAmount.mintAmount
-                })
-
-                const currentlyListed = Ids.map(async (tokenId) => {
-                    const listedStatus = await artnft.connect(signer).getListedFromTokenId(tokenId)
-                    console.log("Listed Status: ", listedStatus.currentlyListed)
-                    return listedStatus.currentlyListed
-                })
-
-                const tokenNames = await Promise.all(nftNames)
-                const tokenCIDs = await Promise.all(CIDs)
-                const tokenPrices = await Promise.all(prices)
-                const tokenFileTypes = await Promise.all(fileTypes)
-                const tokenAmounts = await Promise.all(mintAmounts)
-                const listedTokens = await Promise.all(currentlyListed)
-                console.log("Token Names: ", tokenNames)
-                console.log("Token CIDs ", tokenCIDs)
-                console.log('Prices: ', prices)
-                console.log('File Types: ', fileTypes)
-                console.log('Mint amounts: ', mintAmounts)
-                console.log("Listed Tokens: ", listedTokens)
-                setTokenNames(tokenNames)
-                setTokenCIDs(tokenCIDs)
-                setListedPrice(tokenPrices)
-                setFileTypes(tokenFileTypes)
-                setMintAmounts(tokenAmounts)
-                setListedState(listedTokens)
-                console.log(tokenNames)
-                console.log(listedCIDs)
-                console.log(_fileTypes)
-                console.log(listedPrice)
-                console.log(listedAmounts.toString())
-
-                const audioPresentList = _fileTypes.map(types => {
+                // Retrieve token IDs
+                for (let i = 0; i < count; i++) {
+                    try {
+                        const userInfo = await artnft.idToListedToken(i + 1); // Ensure idToListedToken is defined in the contract
+                        items.push(userInfo.tokenId);
+                        console.log(`Token ID ${i + 1}:`, userInfo.tokenId.toString());
+                    } catch (innerError) {
+                        console.error(`Error retrieving token info for token ID ${i + 1}:`, innerError);
+                    }
+                }
+        
+                // Helper function to get token details
+                const getTokenDetails = async (tokenId) => {
+                    const tokenDetails = await artnft.connect(signer).getListedFromTokenId(tokenId);
+                    return tokenDetails;
+                };
+        
+                // Retrieve all token details concurrently
+                const tokenDetailsPromises = items.map(getTokenDetails);
+                const tokenDetails = await Promise.all(tokenDetailsPromises);
+        
+                // Extract specific details
+                const tokenNames = tokenDetails.map(details => details.nftName);
+                const tokenCIDs = tokenDetails.map(details => details.tokenCIDs);
+                const tokenPrices = tokenDetails.map(details => details.priceOfNFT.toString());
+                const tokenFileTypes = tokenDetails.map(details => details.fileTypes);
+                const tokenAmounts = tokenDetails.map(details => details.supplyAmount);
+                const listedTokens = tokenDetails.map(details => details.currentlyListed);
+        
+                // Log the details
+                console.log("Token Names:", tokenNames);
+                console.log("Token CIDs:", tokenCIDs);
+                console.log("Prices:", tokenPrices);
+                console.log("File Types:", tokenFileTypes);
+                console.log("Mint amounts:", tokenAmounts.toString());
+                console.log("Listed Tokens:", listedTokens);
+        
+                // Update the state
+                setTokenNames(tokenNames);
+                setTokenCIDs(tokenCIDs);
+                setListedPrice(tokenPrices);
+                setFileTypes(tokenFileTypes);
+                setMintAmounts(tokenAmounts);
+                setListedState(listedTokens);
+        
+                // Additional processing
+                const audioPresentList = tokenFileTypes.map(types => {
                     return types.some(type => type === 'audio/mpeg');
                 });
                 setAudioFilePresent(audioPresentList);
-
+        
             } catch (error) {
-                console.log('Error', error)
+                console.log('Error', error);
             }
-        }
+        };
 
         const buyNFT = async (index) => {
             try {
@@ -105,15 +108,19 @@ const NFTShop = ({ provider, artnft, account }) => {
                 console.log('Creator of NFT: ', sale.creator)
                 console.log('Owner of NFT: ', sale.owner)
                 console.log('Seller of NFT: ', sale.seller)
-                loadAllNFTs()
             } catch (error) {
                 console.log('Error', error)
             }
+
+            window.alert('NFT(s) has been purchased')
+
+            loadAllNFTs()
         }
 
     useEffect(() => {
         loadAllNFTs()
-    }, []);
+        //base()
+    }, [artnft]);
 
     return (
         <div className='text-center'>
@@ -124,7 +131,7 @@ const NFTShop = ({ provider, artnft, account }) => {
                     <Col key={index} className="overflow-hidden">
                         <Card bg="dark" border="primary" style={{ width: "190px", height: "350px" }}>
                             <Card.Header>
-                                <Form.Control plaintext readOnly style={{ color: 'white' }} defaultValue={_nftNames[index]} />
+                                <Form.Control className="text-center" plaintext readOnly style={{ color: 'white' }} defaultValue={_nftNames[index]} />
                             </Card.Header>
                             <Card.Img 
                              variant="top" 

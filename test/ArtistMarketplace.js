@@ -1,259 +1,250 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-const toWei = (n) => ethers.utils.parseEther(n.toString())
-const fromWei = (n) => ethers.utils.formatEther(n)
+const toWei = (n) => ethers.utils.parseEther(n.toString());
+const fromWei = (n) => ethers.utils.formatEther(n);
 
 describe("ArtistMarketplace", function () {
-    const NAME = 'ArtMarket'
-    const SYMBOL = 'AMART'
-    const NFT_NAME = "Test NFT"
-    const FILE_NAMES = [ 'file1', 'file2' ]
-    const FILE_TYPES = [ 'type1', 'type2' ]
-    const TOKEN_CIDS = [ 'cid1', 'cid2' ]
-    const PRICE_OF_NFT = toWei(1)
-    const USER_NUMBER = 1
-    const LIST_PRICE = toWei(0.01)
+    const NAME = 'ArtMarket';
+    const SYMBOL = 'AMART';
+    const NFT_NAME = "Test NFT";
+    const CREATOR_NAME = "Artist1";
+    const FILE_NAMES = ['file1', 'file2'];
+    const FILE_TYPES = ['type1', 'type2'];
+    const TOKEN_CIDS = ['cid1', 'cid2'];
+    const BYTES = "0x";
+    const PRICE_OF_NFT = toWei(1);
+    const LIST_PRICE = toWei(0.01);
 
-    let artistMarketplace,
-        contractCreator,
-        artist1,
-        artist2,
-        consumer,
-        consumer2
+    let artistContract,
+    proposalsContract,
+    artistMinter,
+    contractCreator,
+    artist1,
+    artist2,
+    consumer,
+    consumer2;
 
     beforeEach(async () => {
-        let accounts = await ethers.getSigners()
-        contractCreator = accounts[0]
-        artist1 = accounts[1]
-        artist2 = accounts[2]
-        consumer = accounts[3]
-        consumer2 = accounts[4]
-    })
+        let accounts = await ethers.getSigners();
+        contractCreator = accounts[0];
+        artist1 = accounts[1];
+        artist2 = accounts[2];
+        consumer = accounts[3];
+        consumer2 = accounts[4];
 
-    describe('Deployment', () => {
-        beforeEach(async () => {
-            const ArtistMarketplace = await ethers.getContractFactory("ArtistMarketplace")
-            artistMarketplace = await ArtistMarketplace.deploy(NAME, SYMBOL, artist1.address)
-            await artistMarketplace.deployed()
-        })
+        const ArtistMarketplace = await ethers.getContractFactory("ArtistMarketplace");
+        artistContract = await ArtistMarketplace.deploy(artist1.address);
+        await artistContract.deployed();
 
-        it("Has correct name and symbol", async () => {
-            expect(await artistMarketplace.name()).to.equal(NAME)
-            expect(await artistMarketplace.symbol()).to.equal(SYMBOL)
-        })
+        const ProposalsContract = await hre.ethers.getContractFactory('Proposals')
+        proposalsContract = await ProposalsContract.deploy()
+        await proposalsContract.deployed()
 
-        it("Should set the contract creator correctly", async function () {
-            const creatorAddress = await artistMarketplace.getCreatorAddress()
-                //console.log("Creator Address: ", creatorAddress)
-                //console.log("Defined Creator Address: ", contractCreator.address)
-            expect(await artistMarketplace.getCreatorAddress()).to.equal(contractCreator.address);
-        });
-    
-        it("Should set the artist address correctly", async function () {
-            const artistAddress = await artistMarketplace.getArtistAddress()
-                //console.log("Artist Address: ", artistAddress)
-            expect(await artistMarketplace.getArtistAddress()).to.equal(artist1.address);
-        });
-    
-        it("Should add the artist to the whitelist with predefined name 'Artist'", async function () {
-            // Check if the artist is whitelisted with the name 'Artist'
-            //const artist = await artistMarketplace.whiteList(1);
-                //console.log("White List: ", artist)
-            //expect(artist.isListed).to.be.true;
-            //expect(artist.nameForAddress).to.equal("Artist");
+ 
+        const ArtistMinter = await hre.ethers.getContractFactory('ArtistMint')
+        artistMinter = await ArtistMinter.deploy(artistContract.address)
+        await artistMinter.deployed()
 
-            const userInfo = await artistMarketplace.whiteList(artist1.address);
-            expect(userInfo.nameForAddress).to.equal("Artist");
-            expect(userInfo.isListed).to.equal(true);
-        });
-    })
 
-    describe('Admin Functions', () => {
-        beforeEach(async () => {
-            const ArtistMarketplace = await ethers.getContractFactory("ArtistMarketplace")
-            artistMarketplace = await ArtistMarketplace.deploy(NAME, SYMBOL, artist1.address)
-            await artistMarketplace.deployed()
-        })
+        await artistMinter.connect(contractCreator).addToWhtList(artist1.address, CREATOR_NAME);
 
-        it("should return the current listing price", async function () {
-            const price = await artistMarketplace.getListPrice();
-            expect(price).to.equal(LIST_PRICE);
-        });
+        await artistContract.connect(contractCreator).updateListPrice(LIST_PRICE);
+    });
 
-        it("should allow the contract creator to update the listing price", async function () {
-            const newPrice = toWei(0.02);
-            await artistMarketplace.updateListPrice(newPrice);
-            const updatedPrice = await artistMarketplace.getListPrice();
-            expect(updatedPrice).to.equal(newPrice);
-        });
+    it("should create a listed token and emit an event", async () => {
+        const SUPPLY_AMOUNT = 7;
+        const tokenId = 1;
 
-        it("should revert if called by a non-contract creator", async function () {
-            const newPrice = toWei(0.02);
-            await expect(artistMarketplace.connect(artist1).updateListPrice(newPrice)).to.be.revertedWith("Only contract creator can update the listing price");
-        });
-    })
-
-    describe('Sub Functions', () => {
-        beforeEach(async () => {
-            const ArtistMarketplace = await ethers.getContractFactory("ArtistMarketplace")
-            artistMarketplace = await ArtistMarketplace.deploy(NAME, SYMBOL, artist1.address)
-            await artistMarketplace.deployed()
-
-            // Create a listed token for testing
-            await artistMarketplace.connect(artist1).createToken(
-                1, "NFT Test", PRICE_OF_NFT, FILE_NAMES, FILE_TYPES, TOKEN_CIDS, { value: LIST_PRICE }
+        // Calling createListedToken function
+        expect(
+            await artistContract.createListedToken(
+                tokenId,
+                NFT_NAME,
+                CREATOR_NAME,
+                artist1.address,
+                PRICE_OF_NFT,
+                FILE_NAMES,
+                FILE_TYPES,
+                TOKEN_CIDS,
+                SUPPLY_AMOUNT
             )
-        })
-        
-        it("should return the details of a listed token for a given token ID", async function () {
-            // Assuming tokenId is valid and exists
-            const tokenId = 1;
-    
-            // Call the function
-            const listedToken = await artistMarketplace.getListedFromTokenId(tokenId);
-    
-            // Assert the listed token details are correct
-            expect(listedToken.mintAmount).to.equal(1); // Assuming mint amount is 1
-            expect(listedToken.nftName).to.equal("NFT Test");
-            expect(listedToken.priceOfNFT).to.equal(toWei(1));
-            expect(listedToken.fileNames).to.eql(FILE_NAMES);
-            expect(listedToken.fileTypes).to.eql(FILE_TYPES);
-            expect(listedToken.tokenCIDs).to.eql(TOKEN_CIDS);
-            expect(listedToken.currentlyListed).to.equal(true);
-        });
-
-        it("should return the token ID associated with a listed token", async function () {
-            // Assuming tokenId is valid and exists
-            const tokenId = 1;
-    
-            // Call the function
-            const returnedTokenId = await artistMarketplace.getTokenIdFromListedToken(tokenId);
-    
-            // Assert the returned token ID is correct
-            expect(returnedTokenId).to.equal(tokenId);
-        });
-
-        it("Should return the correct NFT name from the ListedToken", async function () {
-            const tokenId = 1
-            const nftName = await artistMarketplace.getNFTNameFromListedToken(tokenId)
-            expect(nftName).to.equal("NFT Test")
-        });
-    
-        it("Should return the correct price of the NFT from the ListedToken", async function () {
-            const tokenId = 1
-            const price = await artistMarketplace.getTokenPriceFromListedToken(tokenId)
-            expect(price).to.equal(PRICE_OF_NFT)
-        });
-    
-        it("Should return the correct file names from the ListedToken", async function () {
-            const tokenId = 1
-            const fileNames = await artistMarketplace.getFileNamesFromListedToken(tokenId)
-            expect(fileNames).to.eql(FILE_NAMES)
-        });
-    
-        it("Should return the correct file types from the ListedToken", async function () {
-            const tokenId = 1
-            const fileTypes = await artistMarketplace.getFileTypesFromListedToken(tokenId)
-            expect(fileTypes).to.eql(FILE_TYPES)
-        });
-    
-        it("Should return the correct token CIDs from the ListedToken", async function () {
-            const tokenId = 1
-            const tokenCIDs = await artistMarketplace.getTokenCIDsFromListedToken(tokenId)
-            expect(tokenCIDs).to.eql(TOKEN_CIDS)
-        });
-
-        it("should return true for a currently listed token", async function () {
-            // Assuming tokenId is valid and exists
-            const tokenId = 1;
-    
-            // Call the function
-            const currentlyListed = await artistMarketplace.getCurrentlyListedFromListedToken(tokenId);
-    
-            // Assert the returned value is true
-            expect(currentlyListed).to.be.true;
-        });
-    
-        it("should return false for a token that is not currently listed", async function () {
-            // Assuming tokenId is valid and exists, but token is not currently listed
-            const tokenId = 1;
-    
-            // Modify token to set currentlyListed to false
-            await artistMarketplace.executeSale(tokenId, 1, { value: PRICE_OF_NFT });
-    
-            // Call the function
-            const currentlyListed = await artistMarketplace.getCurrentlyListedFromListedToken(tokenId);
-    
-            // Assert the returned value is false
-            expect(currentlyListed).to.be.false;
-        });
-
-        it("should return an array of token IDs for all listed tokens", async function () {
-            // Create multiple listed tokens for testing
-            await artistMarketplace.connect(artist1).createToken(
-                1, "NFT Test 1", PRICE_OF_NFT, FILE_NAMES, FILE_TYPES, TOKEN_CIDS, { value: LIST_PRICE }
-            );
-            await artistMarketplace.connect(artist1).createToken(
-                1, "NFT Test 2", PRICE_OF_NFT, FILE_NAMES, FILE_TYPES, TOKEN_CIDS, { value: LIST_PRICE }
+        ).to.emit(artistContract, 'TokenListedSuccess')
+            .withArgs(
+                SUPPLY_AMOUNT,
+                tokenId,
+                NFT_NAME,
+                CREATOR_NAME,
+                artist1.address,
+                artistContract.address,
+                artist1.address,
+                PRICE_OF_NFT,
+                FILE_NAMES,
+                FILE_TYPES,
+                TOKEN_CIDS,
+                true
             );
 
-            // Call the function
-            const tokenIds = await artistMarketplace.getTokenIdsFromListedToken();
-                //console.log("Token Ids: ", tokenIds)
-    
-            // Assert that the array length is equal to the number of tokens listed
-            expect(tokenIds.length).to.equal(3);
-    
-            // Assuming tokenId 1, 2, and 3 are listed
-            expect(tokenIds.toString()).to.include(1);
-            expect(tokenIds.toString()).to.include(2);
-            expect(tokenIds.toString()).to.include(3);
-        });
-    })
+        // Fetching the listed token
+        const listedToken = await artistContract.getListedFromTokenId(tokenId);
 
-    describe('Main Functions', () => {
-        describe('createToken', () => {
-            beforeEach(async () => {
-                const ArtistMarketplace = await ethers.getContractFactory("ArtistMarketplace")
-                artistMarketplace = await ArtistMarketplace.deploy(NAME, SYMBOL, artist1.address)
-                await artistMarketplace.deployed()
-            })
+        // Checking the listed token values
+        expect(listedToken.tokenId).to.equal(tokenId);
+        expect(listedToken.nftName).to.equal(NFT_NAME);
+        expect(listedToken.creatorName).to.equal(CREATOR_NAME);
+        expect(listedToken.creatorAddress).to.equal(artist1.address);
+        expect(listedToken.priceOfNFT).to.equal(PRICE_OF_NFT);
+        expect(listedToken.fileNames).to.deep.equal(FILE_NAMES);
+        expect(listedToken.fileTypes).to.deep.equal(FILE_TYPES);
+        expect(listedToken.tokenCIDs).to.deep.equal(TOKEN_CIDS);
+        expect(listedToken.supplyAmount).to.equal(SUPPLY_AMOUNT);
+        expect(listedToken.currentlyListed).to.be.true;
+    });
 
-            it("should revert if user is not whitelisted", async function () {
-                // Attempt to call createToken function with artist2, who is not whitelisted
-                await expect(artistMarketplace.connect(artist2).createToken(
-                    1, NFT_NAME, PRICE_OF_NFT, FILE_NAMES, FILE_TYPES, TOKEN_CIDS, { value: LIST_PRICE }
-                )).to.be.revertedWith("User is not white listed");
-            });
-    
-            it("should create a new listed token with the specified details", async function () {
-                // Create a new listed token
-                await artistMarketplace.connect(artist1).createToken(
-                    1, NFT_NAME, PRICE_OF_NFT, FILE_NAMES, FILE_TYPES, TOKEN_CIDS, { value: LIST_PRICE }
-                );
-        
-                // Retrieve the created token details
-                const listedToken = await artistMarketplace.getListedFromTokenId(1);
-        
-                // Check if the token is listed
-                expect(listedToken.currentlyListed).to.be.true;
-        
-                // Check if the token details match the provided inputs
-                expect(listedToken.mintAmount).to.equal(1);
-                expect(listedToken.nftName).to.equal(NFT_NAME);
-                expect(listedToken.priceOfNFT).to.equal(PRICE_OF_NFT);
-                expect(listedToken.fileNames).to.have.members(FILE_NAMES);
-                expect(listedToken.fileTypes).to.have.members(FILE_TYPES);
-                expect(listedToken.tokenCIDs).to.have.members(TOKEN_CIDS);
-            });
-        
-            it("should revert if insufficient payment is sent", async function () {
-                // Attempt to create a new listed token with insufficient payment
-                await expect(artistMarketplace.connect(artist1).createToken(
-                    2, NFT_NAME, PRICE_OF_NFT, FILE_NAMES, FILE_TYPES, TOKEN_CIDS, { value: LIST_PRICE }
-                )).to.be.revertedWith("Invalid cost");
-            });
+    it("should make sure the price isn't negative", async () => {
+        const tokenId = 1;
+        const INVALID_PRICE = 0;
+        const SUPPLY_AMOUNT = 5;
+
+        await expect(
+            artistContract.createListedToken(
+                tokenId,
+                NFT_NAME,
+                CREATOR_NAME,
+                artist1.address,
+                INVALID_PRICE,
+                FILE_NAMES,
+                FILE_TYPES,
+                TOKEN_CIDS,
+                SUPPLY_AMOUNT
+            )
+        ).to.be.revertedWith("Make sure the price isn't negative");
+    });
+
+    describe("executeSale", function () {
+        const TOKEN_ID = 1;
+        const PURCHASE_AMOUNT = 3;
+        const SUPPLY_AMOUNT = 7;
+
+        beforeEach(async () => {
+            await artistMinter.connect(artist1).createToken(
+                SUPPLY_AMOUNT, 
+                NFT_NAME, 
+                CREATOR_NAME, 
+                artist1.address, 
+                PRICE_OF_NFT, 
+                FILE_NAMES, 
+                FILE_TYPES, 
+                TOKEN_CIDS, 
+                BYTES,
+                { value: LIST_PRICE.mul(SUPPLY_AMOUNT) }
+            );
         })
+        
+        it("should execute the sale correctly", async () => {
+            const sellerInitialBalance = await ethers.provider.getBalance(artist1.address);
+            const consumerInitialBalance = await ethers.provider.getBalance(consumer.address);
+            const salePrice = PRICE_OF_NFT.mul(PURCHASE_AMOUNT);
+
+            console.log(`ArtistContract: ${artistContract.address}\n`)
+
+            console.log(`ArtistMinter: ${artistMinter.address}\n`)
+
+            console.log(`Proposals: ${proposalsContract.address}\n`)
+
+            const Token = await artistContract.connect(artist1).getListedFromTokenId(TOKEN_ID)
+            console.log("TokenId: ", Token)
+
+            const contractTokenBalance = await artistMinter.balanceOf(artistContract.address, TOKEN_ID)
+            console.log("balance: ", contractTokenBalance)
+
+            const consumerBalance = await artistMinter.balanceOf(consumer.address, TOKEN_ID);
+            console.log("Consumer Tokens: ", consumerBalance)
+
+            const supply = await artistContract.connect(artist1).totalSupply()
+            console.log("supply: ", supply)
+    
+            // Approve marketplace to handle seller's tokens
+            //await artistMinter.connect(artist1).setApprovalForAll(artistContract.address, true);
+    
+            // Execute the sale
+            await artistContract.connect(consumer).executeSale(TOKEN_ID, PURCHASE_AMOUNT, { value: salePrice });
+    
+            // Check the updated supply amount
+            const listedToken = await artistContract.getListedFromTokenId(TOKEN_ID);
+            expect(listedToken.supplyAmount).to.equal(SUPPLY_AMOUNT - PURCHASE_AMOUNT);
+    
+            // Check the ownership update
+            expect(listedToken.ownerAddress).to.equal(consumer.address);
+            expect(listedToken.sellerAddress).to.equal(consumer.address);
+    
+            // Check if the token was transferred to the buyer
+            const consumerBalance2 = await artistMinter.balanceOf(consumer.address, TOKEN_ID);
+            console.log("Consumer Tokens: ", consumerBalance2)
+            expect(consumerBalance2).to.equal(PURCHASE_AMOUNT);
+            const contractTokenBalance2 = await artistMinter.balanceOf(artistContract.address, TOKEN_ID)
+            console.log("balance2: ", contractTokenBalance2)
+    
+            // Check if the proceeds were transferred to the seller
+            const sellerFinalBalance = await ethers.provider.getBalance(artist1.address);
+            const expectedBalance = sellerInitialBalance.add(PRICE_OF_NFT.mul(PURCHASE_AMOUNT));
+
+            // Tolerance range (e.g., 0.1 ether)
+            const tolerance = toWei('0.1');
+
+            expect(sellerFinalBalance).to.be.closeTo(expectedBalance, tolerance);
+
+            //expect(sellerFinalBalance).to.equal(sellerInitialBalance.add(salePrice));
+    
+            // Ensure the buyer paid the correct amount
+            const consumerFinalBalance = await ethers.provider.getBalance(consumer.address);
+            expect(consumerInitialBalance.sub(consumerFinalBalance)).to.be.closeTo(salePrice, ethers.utils.parseEther("0.01")); // Considering gas fees
+
+            // consumer2 purchases the remaining tokens
+            await artistContract.connect(consumer2).executeSale(TOKEN_ID, PURCHASE_AMOUNT, { value: PRICE_OF_NFT.mul(PURCHASE_AMOUNT) });
+            const contractTokenBalance3 = await artistMinter.balanceOf(artistContract.address, TOKEN_ID)
+            console.log("balance3: ", contractTokenBalance3)
+        });
+    
+        it("should fail if purchase amount is greater than supply amount", async () => {
+            const excessivePurchaseAmount = SUPPLY_AMOUNT + 1;
+
+            console.log(`ArtistContract: ${artistContract.address}\n`)
+
+            // Approve marketplace to handle seller's tokens
+            await artistMinter.connect(artist1).setApprovalForAll(artistContract.address, true);
+
+            const Token = await artistContract.connect(artist1).getListedFromTokenId(TOKEN_ID)
+            console.log("TokenId: ", Token)
+
+            await expect(
+                artistContract.connect(consumer).executeSale(TOKEN_ID, excessivePurchaseAmount, { value: PRICE_OF_NFT.mul(excessivePurchaseAmount) })
+            ).to.be.revertedWith("No remaining tokens to sell");
+        });
+    
+        it("should fail if incorrect value is sent", async () => {
+            const incorrectValue = PRICE_OF_NFT.mul(PURCHASE_AMOUNT).sub(ethers.utils.parseEther("0.1"));
+
+            await expect(
+                artistContract.connect(consumer).executeSale(TOKEN_ID, PURCHASE_AMOUNT, { value: incorrectValue })
+            ).to.be.revertedWith("Please submit the asking price in order to complete the purchase");
+        });
+    
+        /*it("should fail if marketplace is not approved to handle tokens", async () => {
+
+            const Token = await artistContract.connect(artist1).getListedFromTokenId(TOKEN_ID)
+            console.log("TokenId: ", Token)
+
+            // Approve marketplace to handle seller's tokens
+            await artistMinter.connect(artist1).setApprovalForAll(artistContract.address, false);
+
+            await expect(
+                artistContract.connect(consumer).executeSale(TOKEN_ID, PURCHASE_AMOUNT, { value: PRICE_OF_NFT.mul(PURCHASE_AMOUNT) })
+            ).to.be.revertedWith("Seller has not approved the marketplace");
+        });*/
     })
-})
+});
+
+
+
+

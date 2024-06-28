@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.9;
 
-import "./ListedToken.sol";
+//import "./ListedToken.sol";
 
 abstract contract IMarketFunctions {
 
@@ -15,7 +15,7 @@ abstract contract IMarketFunctions {
 
     function getMintAmountFromTokenId(uint256 tokenId) public view virtual returns (uint256);
 
-    function getListedFromTokenId(uint256 tokenId) public view virtual returns (ListedToken memory);
+    //function getListedFromTokenId(uint256 tokenId) public view virtual returns (ListedToken memory);
 
     function getTokenIdFromListedToken(uint256 tokenId) public virtual view returns (uint256);
 

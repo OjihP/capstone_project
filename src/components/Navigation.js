@@ -3,9 +3,9 @@ import { Navbar, Nav, Button, Container }  from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import Dropdown from 'react-bootstrap/Dropdown';
 import DropdownButton from 'react-bootstrap/DropdownButton';
-import logo from '../logo.png';
+import logo from '../music_note icon.png';
 
-const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, listenToEvent, artnft }) => {
+const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handleShow, artnft, whtList, pose }) => {
   const [isWhitelisted, setIsWhitelisted] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -14,15 +14,23 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, listen
     try {
       const signer = await provider.getSigner()
       
-      const usersOnWhtList = await artnft.connect(signer).getAllUsersOnWhiteList()
+      /*const usersOnWhtList = await artnft.connect(signer).getAllUsersOnWhiteList()
       usersOnWhtList.forEach(user => {
         console.log("User Address: ", user.userAddress);
       })
-      console.log("All Users on WhiteList", usersOnWhtList.toString())
+      console.log("All Users on WhiteList", usersOnWhtList.toString())*/
+
+      const count = await whtList._numbers()
+      const items = []
+
+        for(var i = 0; i < count; i++) {
+            const userInfo = await whtList.whtList(i + 1)
+            items.push(userInfo)
+        }
 
       // Check if the current user's address is in the whitelist
       const currentUserAddress = await signer.getAddress()
-      const isCurrentUserWhitelisted = usersOnWhtList.some(user => user.userAddress === currentUserAddress)
+      const isCurrentUserWhitelisted = items.some(user => user.userAddress === currentUserAddress)
       console.log(isCurrentUserWhitelisted)
       setIsWhitelisted(isCurrentUserWhitelisted)
 
@@ -64,7 +72,7 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, listen
         className="d-inline-block align-top mx-3"
       />
       <Container>
-        <Navbar.Brand href="#">Artist NFT Webpage Template</Navbar.Brand>
+        <Navbar.Brand as={Link} to="/Home">Artist NFT Webpage Template</Navbar.Brand>
         <Navbar.Collapse className="justify-content-end">
           <Nav className="me-auto">
               <Nav.Link as={Link} to="/Home">Home</Nav.Link>
@@ -86,7 +94,7 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, listen
                 <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/MyNFTs" style={{ color: 'black' }}>My NFTs</Nav.Link></Dropdown.Item>
               )}
               {(account) && (!isWhitelisted) && ( 
-                <Dropdown.Item className='text-center' onClick={listenToEvent}>Listen To Events</Dropdown.Item> 
+                <Dropdown.Item className='text-center' variant="primary" onClick={handleShow}>Listen To Events</Dropdown.Item> 
               )}
               {(isWhitelisted) && (
                 <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Mint" style={{ color: 'black' }}>Mint</Nav.Link></Dropdown.Item> 
