@@ -39,7 +39,7 @@ const Admin = ({ provider, artnft, whtList, pose, account }) => {
     }
  
     return (
-        <div className='text-center'>
+        <div className='padding-fromNav text-center'>
             <p><strong>Set Initial Artist Address</strong></p>
             <p>Initialized Artist:</p>
             <Table striped="columns" bordered hover responsive variant="dark">

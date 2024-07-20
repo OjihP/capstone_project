@@ -123,7 +123,7 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
     }, [artnft]);
 
     return (
-        <div className='text-center'>
+        <div className='padding-fromNav text-center'>
             <p><strong>NFT Shop</strong></p>
             <div className="px-5 py-3 container">
                 <Row xs={1} md={2} lg={4} className="g-4 py-3">

@@ -47,7 +47,7 @@ const Donate = ({ provider, account }) => {
     }
 
     return (
-        <div className="text-center">
+        <div className="padding-fromNav text-center">
             <p>
                 <strong>Donate</strong>
             </p>

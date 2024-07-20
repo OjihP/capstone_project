@@ -5,9 +5,30 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  background-image: url('../src/NuWav_crop.png');
+  background-size: 1550px 730px;
+  background-position: center;
+  background-attachment: fixed; /* Make background fixed */
+  /*height: 100vh; /* Full height */
+ /* width: 100vw;  /* Full width */
+  color: #fff;   /* White text */
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+.padding-fromNav {
+  padding-top: 70px; /* Adjust this value based on the height of your navbar */
+}
+
+.fixed-navbar {
+  position: fixed;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+  color: #fff;   /* White text */
 }

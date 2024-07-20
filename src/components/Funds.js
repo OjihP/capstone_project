@@ -122,7 +122,7 @@ const Funds = ({ provider, artnft, account, pose }) => {
     }, []);
 
     return (
-        <div className="text-center">
+        <div className="padding-fromNav text-center">
             <p><strong>Contract Funds</strong></p>
             <p>Contract Balance: {balance} ETH</p>
             <div>

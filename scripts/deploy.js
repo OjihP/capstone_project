@@ -10,6 +10,8 @@ const fs = require("fs");
 async function main() {
   const NAME = 'Soleplex'
   const SYMBOL = 'PLEX'
+  const network = await ethers.provider.getNetwork();
+
 
   let contractCreator,
       artist1,
@@ -22,15 +24,18 @@ async function main() {
       artist2 = accounts[2]
       consumer = accounts[3]
 
-  
-    
+      console.log('Deploying contracts with the account:', contractCreator.address);
+      console.log('Network:', network.name);
+      console.log('Network ID:', network.chainId);
 
   // Deploy Marketplace 
   const ArtistContract = await hre.ethers.getContractFactory('ArtistMarketplace')
-  let artistContract = await ArtistContract.deploy(artist1.address)
+  let artistContract = await ArtistContract.deploy(contractCreator.address)
 
   await artistContract.deployed()
   console.log(`ArtistMarketplace deployed to: ${artistContract.address}\n`)
+  let CreatorAddress = await artistContract.getCreatorAddress()
+  console.log(`ArtistMarketplace initialzed with the account: ${CreatorAddress}\n` )
 
   // Deploy ArtistWhiteList 
   const ArtistWhiteList = await ethers.getContractFactory("ArtistWhiteList");
@@ -60,6 +65,26 @@ async function main() {
 
   // Initialize quorum in the Proposals contract
   await proposalsContract.initializeQuorum();
+
+  // Read the existing config file
+  let config = {};
+  try {
+    config = JSON.parse(fs.readFileSync('config.json', 'utf-8'));
+  } catch (error) {
+    console.log('config.json not found, creating a new one.');
+  }
+
+  // Update the config with the new addresses and network
+  config[network.chainId] = {
+    artistContract: { address: artistContract.address },
+    artistWhiteList: { address: artistWhiteList.address },
+    proposalsContract: { address: proposalsContract.address },
+    artistMinter: { address: artistMinter.address }
+  };
+
+  // Write the updated config back to the file
+  fs.writeFileSync('config.json', JSON.stringify(config, null, 2));
+  console.log('Updated config.json');
 
   // Deploy Functions
   //const ArtistFunctions = await hre.ethers.getContractFactory('MarketplaceFunctions')

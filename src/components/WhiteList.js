@@ -51,7 +51,7 @@ const WhiteList = ({ provider, whtList, account }) => {
     }, []);
 
     return (
-        <div className='text-center'>
+        <div className='padding-fromNav text-center'>
             <p><strong>White List</strong></p>
             <Table striped bordered hover responsive variant="dark">
                 <thead>

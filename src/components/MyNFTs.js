@@ -126,7 +126,7 @@ const MyNFTs = ({ provider, artnft, minter, account }) => {
         }, [account]);
 
     return (
-        <div className='text-center'>
+        <div className='padding-fromNav text-center'>
             <p><strong>MY NFTs</strong></p>
             <div className="px-5 py-3 container">
                 <Row xs={1} md={2} lg={4} className="g-4 py-3">

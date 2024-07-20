@@ -2,9 +2,10 @@ import React from 'react';
 
 const Home = () => {
     return (
-        <div className="text-center">
+        <div className="padding-fromNav text-center">
             <header>
-                <h1>Artist Name</h1>
+                <h1>Welcome to NuWav Artist</h1>
+                <p>Your gateway to the best NFT experience!</p>
                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed consequat magna felis.</p>
             </header>
             <section className="bio">
@@ -33,3 +34,4 @@ const Home = () => {
 };
 
 export default Home;
+

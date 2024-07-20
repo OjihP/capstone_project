@@ -12,5 +12,19 @@
     "artistMinter": {
       "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
     }
+  },
+  "11155111": {
+    "artistContract": {
+      "address": "0x135d3bB9C5825656e615Fc0B0dEa2652934f0674"
+    },
+    "artistWhiteList": {
+      "address": "0x83345B948E3091c98e974b7E975D3B9475FCD0F3"
+    },
+    "proposalsContract": {
+      "address": "0x93a3952EB472c7e226a204d7C5B54FD74F60E2D6"
+    },
+    "artistMinter": {
+      "address": "0x0D1E75e2C2bD08b341344C6dF16E73e52CC6A936"
+    }
   }
 }

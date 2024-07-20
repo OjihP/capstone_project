@@ -8,6 +8,8 @@ import logo from '../music_note icon.png';
 const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handleShow, artnft, whtList, pose }) => {
   const [isWhitelisted, setIsWhitelisted] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false);
+
 
   const getWhiteListedUsers = async () => {
     setIsWhitelisted(false)
@@ -46,13 +48,25 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
 
       // Check if the current user's address is the Admin's address
       const currentUserAddress = await signer.getAddress()
+      console.log("Current User Address: ", currentUserAddress)
       const adminAddress = await artnft.connect(signer).getCreatorAddress()
+      console.log("Admin Address: ", adminAddress)
       const isCreator = currentUserAddress === adminAddress
       setIsAdmin(isCreator)
     } catch (error) {
       console.log('Error fetching Admin:', error)
     }
   }
+
+  const handleScroll = () => {
+    const offset = window.scrollY;
+    setIsScrolled(offset > 200);
+  };
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     //console.log(account)
@@ -62,8 +76,22 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
     //console.log("useEffect")
   }, [account]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      if (scrollPosition > 0) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <Navbar expand="lg" bg="secondary" variant="dark">
+    <Navbar expand="lg" bg={isScrolled ? 'dark' : 'dark'} variant="dark" fixed="top">
       <img
         alt="logo"
         src={logo}
@@ -112,7 +140,7 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
             <Nav>
               {account ? (
                 <Nav.Link
-                  href={`http://127.0.0.1:8545/address/${account}`}
+                  href={`https://sepolia.etherscan.io/address/${account}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="button nav-button btn-sm mx-4">

@@ -22,7 +22,7 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Ownabl
     using Strings for uint256;
     using Counters for Counters.Counter;
 
-    address payable contractCreator;
+    address payable public contractCreator;
     address internal artist;
     uint256 public currentTokenID = 0;
     ArtistMint public tokenCall;
@@ -67,9 +67,9 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Ownabl
     // This mapping maps tokenId to token info and is helpful when retrieving details about a tokenId
     mapping(uint256 => ListedToken) public idToListedToken;
 
-    constructor(address _artist) ERC721("ArtistMarketplace", "ARTM") {
+    constructor(address payable) ERC721("ArtistMarketplace", "ARTM") {
         contractCreator = payable(msg.sender);
-        artist = _artist;
+        //artist = _artist;
         //addToWhtList(_artist, "Artist"); // Add artist to the white list with a predefined name
     }
 

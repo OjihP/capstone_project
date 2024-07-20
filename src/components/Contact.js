@@ -1,7 +1,7 @@
 import React from 'react';
 
 const Contact = () => {
-  return <div>Contact Page</div>;
+  return <div className="padding-fromNav">Contact Page</div>;
 };
 
 export default Contact;

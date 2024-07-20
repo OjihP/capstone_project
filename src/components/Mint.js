@@ -155,7 +155,7 @@ const Mint = ({ provider, artnft, account, minter }) => {
     }, [])
 
     return(
-      <div className="container-fluid mt-5">
+      <div className="padding-fromNav container-fluid mt-5">
         <div className="row">
           <div className='text-center'><p><strong>Upload Files into NFT Package</strong></p></div>
           <main role="main" className="col-lg-12 mx-auto" style={{ maxWidth: '1000px' }}>
