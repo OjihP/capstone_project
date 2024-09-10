@@ -1,45 +1,29 @@
-//SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.9;
 
 import "./ArtistMarketplace.sol";
 import "./ArtistWhiteList.sol";
-//import "./ContractData.sol";
-//import "./ListedToken.sol";
-//import "./MarketplaceFunctions.sol";
-//import "./Proposals.sol";
-
-import "@openzeppelin/contracts/utils/Counters.sol"; // Safe and secure implementation of a counter in solidity. Can help track # of items sold in a marketplace
-//import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-//import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-//import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract ArtistMint is ERC1155, ArtistWhiteList {
+contract ArtistMint is ERC1155, ArtistWhiteList, ReentrancyGuard {
     using Counters for Counters.Counter;
 
-    // _tokenIds variable has the most recent minted tokenId
     Counters.Counter public _tokenIds;
     ArtistMarketplace public contractCall;
+    ArtistWhiteList public artistWhiteList;
     uint256 public listedPrice;
-    address payable contractCreator;
+    address payable public contractCreator;
 
     modifier onlyWhtListed() {
-        uint256 num = _numbers.current();
-        bool isListed = false;
-
-        for (uint256 i = 0; i < num; i++) {
-            if (msg.sender == whtList[i + 1].userAddress) {
-                isListed = true;
-                break;
-            }
-        }
-
-        require(isListed = true, "Not white listed");
+        //require(artistWhiteList.isWhitelisted(msg.sender), "Not whitelisted");
         _;
     }
-    
-    constructor(address payable marketplaceAddress) ERC1155("") {
+
+    constructor(address payable marketplaceAddress, address whiteListAddress) ERC1155("") {
         contractCall = ArtistMarketplace(marketplaceAddress);
+        artistWhiteList = ArtistWhiteList(whiteListAddress);
         contractCreator = payable(msg.sender);
     }
 
@@ -47,50 +31,74 @@ contract ArtistMint is ERC1155, ArtistWhiteList {
         return _tokenIds.current();
     }
 
-    // Main Functions
-
-    // The first time a token is created, it is listed here
-    function createToken(
-        uint256 _mintAmount,
-        string memory _nftName,
-        string memory _creatorName, 
-        address _creatorAddress,
-        uint256 price, 
-        string[] memory _fileNames, 
-        string[] memory _fileTypes, 
-        string[] memory _tokenCIDs,
+    function mintToken(
+        ArtistMarketplace.ListedToken memory tokenData,
+        ArtistMarketplace.FileData memory fileData, 
         bytes memory data 
-        ) public payable onlyWhtListed() returns (uint) {
-        // Must mint at least 1 token
-        require(_mintAmount > 0, "Mint at least 1 token");
+    ) public payable onlyWhtListed nonReentrant returns (uint) {
+        require(tokenData.supplyAmount > 0, "Mint at least 1 token");
 
         listedPrice = contractCall.getListPrice();
-        // Require enough payment
-        require(msg.value >= listedPrice * _mintAmount, "Invalid cost");
+        require(msg.value >= listedPrice * tokenData.supplyAmount, "Invalid cost");
 
-        _creatorAddress = msg.sender;
-
-       // Increment the tokenId counter, which is keeping track of the number of minted NFTs
+        // Mint the token
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
+        _mint(msg.sender, newTokenId, tokenData.supplyAmount, data);
 
-        _mint(msg.sender, newTokenId, _mintAmount, data);
+        // Approve and transfer tokens to the marketplace
+        setApprovalForAll(address(contractCall), true);
+        safeTransferFrom(msg.sender, address(contractCall), newTokenId, tokenData.supplyAmount, data);
 
-        uint256 _supplyAmount = balanceOf(msg.sender, newTokenId);
+        // Create token and file data in the marketplace
+        contractCall.createListedToken(
+            newTokenId, 
+            tokenData.supplyAmount, 
+            tokenData.nftName, 
+            tokenData.artistName, 
+            tokenData.artistAddress,
+            payable(address(contractCall)), 
+            payable(tokenData.artistAddress), 
+            tokenData.nftPrice, 
+            true
+        );
 
-        // Approve the marketplace to transfer the tokens
-        setApprovalForAll(address(contractCall), true); 
-        setApprovalForAll(address(this), true);
-
-        // Transfers NFT ownership to smart contract. If the smart contract owns the NFT, it makes it easier to transfer the NFT. => (56:05)
-        safeTransferFrom(msg.sender, address(contractCall), newTokenId, _supplyAmount, data);
-
-        contractCall.createListedToken(newTokenId, _nftName, _creatorName, _creatorAddress, price, _fileNames, _fileTypes, _tokenCIDs, _supplyAmount);
+        contractCall.createListedFileData(
+            newTokenId, 
+            fileData.fileNames, 
+            fileData.fileTypes, 
+            fileData.tokenCIDs, 
+            fileData.nestIDs
+        );
         
-        // Transfer the listing fee to the marketplace creator
-        payable(contractCreator).transfer(listedPrice * _mintAmount);
+        /*// Transfer the listing fee to the ArtistMint.sol contract
+        (bool success, ) = address(this).call{value: listedPrice * tokenData.supplyAmount}("");
+        require(success, "Transfer failed");*/
 
         return newTokenId;
-        //return _tokenSupply.current();
     }
+
+    function burnTokens(uint256 tokenId, uint256 amount) public onlyWhtListed {
+        require(balanceOf(address(contractCall), tokenId) >= amount, "Insufficient balance to burn");
+        _burn(address(contractCall), tokenId, amount);
+    }
+
+    function transferRefund(uint amount, address _recipient) public payable {
+
+
+        listedPrice = contractCall.getListPrice();
+
+        // Calculate the refund based on the listed price and the amount of tokens burned
+        uint256 refundAmount = listedPrice * amount;
+
+        // Ensure the contract creator has enough balance to refund
+        require(address(this).balance >= refundAmount, "Insufficient balance in ArtistMint");
+
+        // Transfer the refund to the user
+        //payable(msg.sender).transfer(refundAmount);
+        (bool success, ) = _recipient.call{value: refundAmount}("");
+        require(success, "Refund transfer failed");
+    }
+
+    receive() external payable {}
 }

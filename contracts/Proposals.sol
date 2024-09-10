@@ -3,12 +3,8 @@ pragma solidity ^0.8.0;
 
 import "./ArtistMarketplace.sol";
 import "./ArtistWhiteList.sol";
-//import "./ContractData.sol";
-
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract Proposals {
-    using SafeMath for uint256;
     using Counters for Counters.Counter;
 
     uint256 public proposalCount;
@@ -18,8 +14,7 @@ contract Proposals {
     uint256 public whtListTotal;
 
     mapping(uint256 => Proposal) public proposals;
-    //mapping(uint256 => uint256) public recipientBalances;
-    mapping(address => mapping(uint256 => bool)) votes;
+    mapping(address => mapping(uint256 => bool)) public votes;
 
     struct Proposal {
         uint256 id;
@@ -38,7 +33,7 @@ contract Proposals {
         address recipient,
         address creator
     );
-    event Vote(uint256 id, address investor);
+    event Vote(uint256 id, address voter);
     event Finalize(uint256 id);
 
     constructor(address payable marketplaceAddress, address whiteListAddress) {
@@ -47,9 +42,21 @@ contract Proposals {
     }
 
     function initializeQuorum() public returns (uint256) {
-        // Set qourum based on the number of white listed users
+        // Set quorum based on the number of white listed users
         whtListTotal = listCall.getWhtListTotal();
-        quorum = whtListTotal.mul(70).div(100);
+
+        uint256 numerator = whtListTotal * 70;
+        uint256 denominator = 100;
+        uint256 quotient = numerator / denominator;
+        uint256 remainder = numerator % denominator;
+
+        // Check the remainder to determine if we should round up or down
+        if (remainder * 2 >= denominator) {
+            quorum = quotient + 1; // Round up
+        } else {
+            quorum = quotient; // Round down
+        }
+
         return quorum;
     }
 
@@ -88,19 +95,13 @@ contract Proposals {
 
     // Up vote a proposal
     function voteUp(uint256 _id) external {
-        // Fetch proposal from mapping by id
         Proposal storage proposal = proposals[_id];
 
-        // Don't let investors vote twice
-        require(!votes[msg.sender][_id], "already voted");
+        require(!votes[msg.sender][_id], "Already voted");
 
-        // update votes
         proposal.votes++;
-
-        // Track that user has voted
         votes[msg.sender][_id] = true;
 
-        // Emit an event
         emit Vote(_id, msg.sender);
     }
 
@@ -108,49 +109,19 @@ contract Proposals {
         return votes[user][proposalId];
     }
 
-    // Down vote a proposal
-    /*function voteDown(uint256 _id) external {
-        // Fetch proposal from mapping by id
-        Proposal storage proposal = proposals[_id];
-
-        // Don't let investors vote twice
-        require(!votes[msg.sender][_id], "already voted");
-
-        // update votes
-        proposal.votes--;
-
-        // Track that user has voted
-        votes[msg.sender][_id] = true;
-
-        // Emit an event
-        emit Vote(_id, msg.sender);
-    }*/
-
-    // Finalize proposal & tranfer funds
+    // Finalize proposal & transfer funds
     function finalizeProposal(uint256 _id) external {
-        // Fetch proposal from mapping by id
         Proposal storage proposal = proposals[_id];
 
-        // Ensure proposal is not already finalized
-        require(proposal.finalized == false, "proposal already finalized");
-
-        // Check that proposal has enough votes
-        require(proposal.votes >= quorum, "must reach quorum to finalize proposal");
-
-        // Check that the contract has enough ether
-        require(contractCall.getMarketplaceBalance() >= proposal.amount, "Amount exceeds contract funds.");
+        require(!proposal.finalized, "Proposal already finalized");
+        require(proposal.votes >= quorum, "Must reach quorum to finalize proposal");
+        require(address(contractCall).balance >= proposal.amount, "Amount exceeds contract funds");
 
         // Transfer the funds to recipient from marketplace contract
         contractCall.transferFunds(proposal.recipient, proposal.amount);
 
-        // Transfer the funds to recipient
-        //(bool sent, ) = proposal.recipient.call{value: proposal.amount}("");
-        //require(sent, "could not send funds to recipient");
-
-        // Mark proposal as finalized
         proposal.finalized = true;
 
-        // Emit event
         emit Finalize(_id);
     }
 }

@@ -1,12 +1,6 @@
 [
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_artist",
-        "type": "address"
-      }
-    ],
+    "inputs": [],
     "stateMutability": "nonpayable",
     "type": "constructor"
   },
@@ -135,13 +129,13 @@
       {
         "indexed": false,
         "internalType": "string",
-        "name": "creatorName",
+        "name": "artistName",
         "type": "string"
       },
       {
         "indexed": false,
         "internalType": "address",
-        "name": "creatorAddress",
+        "name": "artistAddress",
         "type": "address"
       },
       {
@@ -159,32 +153,20 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "priceOfNFT",
+        "name": "nftPrice",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string[]",
-        "name": "fileNames",
-        "type": "string[]"
-      },
-      {
-        "indexed": false,
-        "internalType": "string[]",
-        "name": "fileTypes",
-        "type": "string[]"
-      },
-      {
-        "indexed": false,
-        "internalType": "string[]",
-        "name": "tokenCIDs",
-        "type": "string[]"
       },
       {
         "indexed": false,
         "internalType": "bool",
         "name": "currentlyListed",
         "type": "bool"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
       }
     ],
     "name": "TokenListedSuccess",
@@ -214,19 +196,6 @@
     ],
     "name": "Transfer",
     "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "_itemsSold",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "_value",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
   },
   {
     "inputs": [
@@ -266,30 +235,23 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "contractCreator",
+    "outputs": [
+      {
+        "internalType": "address payable",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
         "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_nftName",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_creatorName",
-        "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "_creatorAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "price",
         "type": "uint256"
       },
       {
@@ -308,9 +270,62 @@
         "type": "string[]"
       },
       {
+        "internalType": "uint256[]",
+        "name": "_nestIDs",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "createListedFileData",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
-        "name": "supplyAmount",
+        "name": "_tokenId",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_supplyAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "_nftName",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_artistName",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "_artistAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address payable",
+        "name": "_ownerAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address payable",
+        "name": "_sellerAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_nftPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "_currentlyListed",
+        "type": "bool"
       }
     ],
     "name": "createListedToken",
@@ -319,16 +334,21 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "currentTokenID",
-    "outputs": [
+    "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
         "type": "uint256"
       }
     ],
-    "stateMutability": "view",
+    "name": "deleteMultipleTokens",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -370,7 +390,7 @@
   },
   {
     "inputs": [],
-    "name": "getArtistAddress",
+    "name": "getCreatorAddress",
     "outputs": [
       {
         "internalType": "address",
@@ -382,13 +402,41 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "getCreatorAddress",
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getFileDataFromTokenId",
     "outputs": [
       {
-        "internalType": "address",
+        "components": [
+          {
+            "internalType": "string[]",
+            "name": "fileNames",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string[]",
+            "name": "fileTypes",
+            "type": "string[]"
+          },
+          {
+            "internalType": "string[]",
+            "name": "tokenCIDs",
+            "type": "string[]"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "nestIDs",
+            "type": "uint256[]"
+          }
+        ],
+        "internalType": "struct ArtistMarketplace.FileData",
         "name": "",
-        "type": "address"
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",
@@ -436,12 +484,12 @@
           },
           {
             "internalType": "string",
-            "name": "creatorName",
+            "name": "artistName",
             "type": "string"
           },
           {
             "internalType": "address",
-            "name": "creatorAddress",
+            "name": "artistAddress",
             "type": "address"
           },
           {
@@ -456,23 +504,8 @@
           },
           {
             "internalType": "uint256",
-            "name": "priceOfNFT",
+            "name": "nftPrice",
             "type": "uint256"
-          },
-          {
-            "internalType": "string[]",
-            "name": "fileNames",
-            "type": "string[]"
-          },
-          {
-            "internalType": "string[]",
-            "name": "fileTypes",
-            "type": "string[]"
-          },
-          {
-            "internalType": "string[]",
-            "name": "tokenCIDs",
-            "type": "string[]"
           },
           {
             "internalType": "bool",
@@ -483,38 +516,6 @@
         "internalType": "struct ArtistMarketplace.ListedToken",
         "name": "",
         "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getMarketplaceBalance",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      }
-    ],
-    "name": "getUserERC1155Tokens",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
       }
     ],
     "stateMutability": "view",
@@ -547,12 +548,12 @@
       },
       {
         "internalType": "string",
-        "name": "creatorName",
+        "name": "artistName",
         "type": "string"
       },
       {
         "internalType": "address",
-        "name": "creatorAddress",
+        "name": "artistAddress",
         "type": "address"
       },
       {
@@ -567,7 +568,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "priceOfNFT",
+        "name": "nftPrice",
         "type": "uint256"
       },
       {
@@ -598,6 +599,19 @@
         "internalType": "bool",
         "name": "",
         "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "listPrice",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -999,7 +1013,7 @@
     ],
     "name": "updateListPrice",
     "outputs": [],
-    "stateMutability": "payable",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

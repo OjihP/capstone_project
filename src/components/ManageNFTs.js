@@ -1,61 +1,62 @@
-import { useState, useEffect } from 'react'
-import { ethers } from 'ethers'
-import { Row, Col, Card, Form, Modal, Tabs, Tab, ListGroup, InputGroup, Button } from 'react-bootstrap';
+import { ethers } from 'ethers';
+import { useState, useEffect } from 'react';
+import { Row, Col, Card, Form, Modal, Tabs, Tab, ListGroup, Button, InputGroup } from 'react-bootstrap'
 import ReactAudioPlayer from 'react-audio-player'
 import ReactPlayer from 'react-player';
 
 const toWei = (n) => ethers.utils.parseEther(n.toString())
 const fromWei = (n) => ethers.utils.formatEther(n)
 
-const NFTShop = ({ provider, artnft, account, minter }) => {
-   const [_nftNames, setTokenNames] = useState([])
-   const [listedCIDs, setTokenCIDs] = useState([])
-   const [listedPrice, setListedPrice] = useState([])
-   const [_fileTypes, setFileTypes] = useState([])
-   const [listedAmounts, setMintAmounts] = useState([])
-   const [purchaseAmount, setPurchaseAmount] = useState(null)
-   const [audioFilePresent, setAudioFilePresent] = useState(false)
-   const [listedState, setListedState] = useState(true)
-   const [_nestIDs, setNestIDs] = useState([])
-   const [show, setShow] = useState(false);
-   const [selectedNFT, setSelectedNFT] = useState(null);
-   const [nestIDTabs, setNestIDTabs] = useState({});
+const ManageNFTs = ({ provider, artnft, minter, account }) => {
+    const [_nftNames, setTokenNames] = useState([])
+    const [listedCIDs, setTokenCIDs] = useState([])
+    const [listedPrice, setListedPrice] = useState([])
+    const [_fileTypes, setFileTypes] = useState([])
+    const [listedAmounts, setMintAmounts] = useState([])
+    const [listedState, setListedState] = useState(false)
+    const [show, setShow] = useState(false);
+    const [selectedNFT, setSelectedNFT] = useState(null)
+    const [nestIDTabs, setNestIDTabs] = useState({})
+    const [_nestIDs, setNestIDs] = useState([])
+    const [_tokenIdArray, setTokenIdArray] = useState([])
+    const [_fileDataIdArray, setFileDataIdArray] = useState([])
+    const [burnAmount, setBurnAmount] = useState(0)
+    //const [timeStamp, setTokenTimeStamp] = useState(0)
 
-   const handleClose = () => setShow(false);
+    const handleClose = () => setShow(false);
 
-   const handleShow = (index, tokenId) => {
+    const handleShow = (index, tokenId) => {
         setSelectedNFT({ index, tokenId });
         setShow(true);
     };
 
-    const loadAllNFTs = async () => {
+    const loadUserNFTs = async () => {
         try {
             const signer = await provider.getSigner();
             const count = await minter.tokenSupply();
+            const mintContractBalance = await provider.getBalance('0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9');
+            console.log("Mint Contract Balance", mintContractBalance.toString())
             const tokenIdArray = [];
             const fileDataIdArray = [];
-
-            console.log("Total tokens count:", count.toString());
-
-    
-            // Retrieve token IDs
-            /*for (let i = 0; i < count; i++) {
-                const userInfo = await artnft.connect(signer).idToListedToken(i + 1);
-                items.push(userInfo.tokenId);
-            }*/
 
             // Retrieve token IDs
             for (let i = 0; i < count; i++) {
                 try {
-                    const tokenInfo = await artnft.idToListedToken(i + 1); // Ensure idToListedToken is defined in the contract
-                    tokenIdArray.push(tokenInfo.tokenId);
-                    fileDataIdArray.push(tokenInfo.tokenId);
-                    console.log(`Token ID ${i + 1}:`, tokenInfo.tokenId.toString());
+                    const tokenInfo = await artnft.idToListedToken(i + 1);
+
+                    // Check if the creatorAddress matches the account
+                    if (tokenInfo.artistAddress.toLowerCase() === account.toLowerCase()) {
+                        tokenIdArray.push(tokenInfo.tokenId);
+                        fileDataIdArray.push(tokenInfo.tokenId);
+                        setTokenIdArray(tokenIdArray)
+                        setFileDataIdArray(fileDataIdArray)
+                        console.log(`Token ID ${i + 1}:`, tokenInfo.tokenId.toString());
+                    }
                 } catch (innerError) {
                     console.error(`Error retrieving token info for token ID ${i + 1}:`, innerError);
                 }
             }
-    
+
             // Helper function to get token details
             const getTokenDetails = async (tokenId) => {
                 const tokenDetails = await artnft.connect(signer).getListedFromTokenId(tokenId);
@@ -67,14 +68,18 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
                 const tokenFileDetails = await artnft.connect(signer).getFileDataFromTokenId(tokenId);
                 return tokenFileDetails;
             };
-    
+
             // Retrieve all token details concurrently
             const tokenDetailPromises = tokenIdArray.map(getTokenDetails);
             const tokenDetails = await Promise.all(tokenDetailPromises);
     
             const tokenDetailFilePromises = fileDataIdArray.map(getTokenFileDetails);
             const tokenFileDetails = await Promise.all(tokenDetailFilePromises);
-    
+
+            // Log the filtered token details
+            console.log(tokenDetails);
+            console.log(tokenFileDetails)
+
             // Extract specific details
             const tokenNames = tokenDetails.map(details => details.nftName);
             const tokenPrices = tokenDetails.map(details => details.nftPrice.toString());
@@ -85,17 +90,6 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
             const fileTypes = tokenFileDetails.map(details => details.fileTypes);
             const tokenCIDs = tokenFileDetails.map(details => details.tokenCIDs);
             const nestIDs = tokenFileDetails.map(details => details.nestIDs)
-    
-            // Log the details
-            console.log("Token Names:", tokenNames);
-            console.log("Prices:", tokenPrices);
-            console.log("Mint amounts:", tokenAmounts.toString());
-            console.log("Listed Tokens:", listedTokens);
-
-            console.log("File Names:", fileNames);
-            console.log("File Types:", fileTypes);
-            console.log("Token CIDs:", tokenCIDs);
-            console.log("Nest IDs:", nestIDs.toString())
 
             // Organize files by nestID, ensuring separation by tokenId
             const tabsData = tokenIdArray.reduce((acc, tokenId, tokenIndex) => {
@@ -122,9 +116,6 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
                 return acc;
             }, {});
 
-            console.log(nestIDTabs)
-            console.log(tabsData)
-
             // Update the state
             setTokenNames(tokenNames);
             setTokenCIDs(tokenCIDs);
@@ -134,17 +125,12 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
             setListedState(listedTokens);
             setNestIDTabs(tabsData)
             setNestIDs(nestIDs);
-    
-            // Additional processing
-            const audioPresentList = fileTypes.map(types => {
-                return types.some(type => type === 'audio/mpeg');
-            });
-            setAudioFilePresent(audioPresentList);
-    
+            console.log(listedCIDs)
+
         } catch (error) {
-            console.log('Error', error);
+            console.error("Error loading NFTs:", error);
         }
-    };
+    }
 
     const renderFileContent = (file, tokenId) => {
         const { CID, fileType, fileName } = file; // Destructure the file object
@@ -190,42 +176,79 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
         }
         return null;
     };
-    
-    const buyNFT = async (index) => {
+
+    const deleteNFT = async (index) => {
         try {
-            const tokenId = index + 1
-            console.log('TokenId: ', tokenId)
-            console.log('Price by Index: ', listedPrice[index])
-            const signer = await provider.getSigner()
-            const totalAmount = ethers.BigNumber.from(listedPrice[index]).mul(ethers.BigNumber.from(purchaseAmount));
-            console.log(purchaseAmount)
-            console.log('Total Price: ', totalAmount.toString())
-            await artnft.connect(signer).executeSale(tokenId, purchaseAmount, { value: toWei(totalAmount) })
-            const sale = await artnft.getListedFromTokenId(tokenId)
-            console.log('Creator of NFT: ', sale.creator)
-            console.log('Owner of NFT: ', sale.owner)
-            console.log('Seller of NFT: ', sale.seller)
+            const signer = await provider.getSigner();
+            const tokenId = _tokenIdArray[index]
+            console.log(tokenId)
+            console.log(await artnft.getListedFromTokenId(tokenId))
+
+            /*// Remove the selected NFT from the tokenIdArray and fileDataIdArray
+            const updatedTokenIdArray = [..._tokenIdArray];
+            const updatedFileDataIdArray = [..._fileDataIdArray];
+    
+            // Remove the NFT at the specified index
+            updatedTokenIdArray.splice(tokenId, 1);
+            updatedFileDataIdArray.splice(tokenId, 1);
+    
+            // Update the state variables
+            setTokenIdArray(updatedTokenIdArray);
+            setFileDataIdArray(updatedFileDataIdArray);
+    
+            // Optional: Remove associated data from other state variables (e.g., names, CIDs)
+            const updatedNames = [..._nftNames];
+            const updatedCIDs = [...listedCIDs];
+            const updatedPrices = [...listedPrice];
+            const updatedAmounts = [...listedAmounts];
+            const updatedFileTypes = [..._fileTypes];
+            const updatedNestIDTabs = { ...nestIDTabs };
+    
+            updatedNames.splice(tokenId, 1);
+            updatedCIDs.splice(tokenId, 1);
+            updatedPrices.splice(tokenId, 1);
+            updatedAmounts.splice(tokenId, 1);
+            updatedFileTypes.splice(tokenId, 1);
+            delete updatedNestIDTabs[_tokenIdArray[tokenId]]; // Assuming nestIDTabs is keyed by tokenId
+    
+            setTokenNames(updatedNames);
+            setTokenCIDs(updatedCIDs);
+            setListedPrice(updatedPrices);
+            setMintAmounts(updatedAmounts);
+            setFileTypes(updatedFileTypes);
+            setNestIDTabs(updatedNestIDTabs);*/
+
+            await artnft.connect(signer).deleteMultipleTokens(tokenId, burnAmount, account);
+
+            loadUserNFTs();
+    
+            console.log(`Deleted NFT at index: ${tokenId}`);
         } catch (error) {
-            console.log('Error', error)
+            console.error("Error deleting NFT:", error);
         }
+    };
+    
 
-        window.alert('NFT(s) has been purchased')
+    const changeNFT = async () => {
 
-        loadAllNFTs()
     }
 
     useEffect(() => {
-        loadAllNFTs()
-    }, [artnft]);
+        if (account) {
+            loadUserNFTs();
+        }
+    }, [account]);
 
     return (
         <div className='padding-fromNav text-center'>
-            <p><strong>NFT Shop</strong></p>
+            <header>
+                <h1>Listed NFTs</h1>
+            </header>
             <div className="px-5 py-3 container">
                 <Row xs={1} md={2} lg={4} className="g-4 py-3">
                     {listedCIDs.map((uri, index) => {
-                        const tokenId = index + 1
-                        return(
+                        const tokenId = _tokenIdArray[index]
+                        return (
                             <Col key={index} className="overflow-hidden">
                                 <Card bg="dark" border="primary" style={{ width: "190px", height: "350px" }}>
                                     <Card.Header>
@@ -238,22 +261,22 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
                                         width="0px"
                                         onClick={() => handleShow(index, tokenId)}
                                     />
-                                    {audioFilePresent[index] && (
-                                        <ReactAudioPlayer
-                                            style={{ width: "189px", height: "20px" }}
-                                            src={`https://gateway.pinata.cloud/ipfs/${uri[1]}`}
-                                            controls
-                                            controlslist="nodownload"
-                                        />
-                                    )}
                                     <Card.Footer> 
-                                        <InputGroup className="mb-3">
-                                            <Button onClick={() => buyNFT(index)} style={{ width: "100px" }} variant="primary" id="button-addon1" size="sm" disabled={listedState[index] === false}>
-                                                Buy {listedPrice[index].toString()} ETH <br /> 
-                                                {listedAmounts[index].toString()} Left
-                                            </Button>
-                                            <Form.Control onChange={(e) => setPurchaseAmount(e.target.value)} style={{ width: "10px" }} aria-label="Amount purchase" aria-descibedby="basic-addon1" disabled={listedState[index] === false}/>
-                                        </InputGroup>
+                                        <div style={{ color: 'white', fontSize: '0.8rem' }}>
+                                            <p>
+                                                Amount: {listedAmounts[index].toString()} Left <br />
+                                                Price: {listedPrice[index].toString()} ETH
+                                                <InputGroup>
+                                                    <Button onClick={() => deleteNFT(index)} style={{ width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
+                                                        Delete NFT
+                                                    </Button>
+                                                    <Form.Control onChange={(e) => setBurnAmount(e.target.value)} style={{ height: "30px", width: "1px" }} aria-label="Amount to burn" aria-descibedby="basic-addon1" />
+                                                </InputGroup>
+                                                <Button onClick={() => changeNFT()} style={{ width: "100px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
+                                                    Change NFT
+                                                </Button>
+                                            </p>
+                                        </div>
                                     </Card.Footer>
                                 </Card>
                             </Col>
@@ -267,7 +290,7 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
                     <Modal.Title>{selectedNFT !== null && _nftNames[selectedNFT]}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {selectedNFT !== null && (
+                    {selectedNFT !== null && nestIDTabs[selectedNFT.tokenId] && (
                         <Tabs defaultActiveKey={Object.keys(nestIDTabs[selectedNFT.tokenId])[0]} id="uncontrolled-tab-example" className="mb-3">
                             {Object.keys(nestIDTabs[selectedNFT.tokenId]).map((nestID) => (
                                 <Tab eventKey={nestID} title={`Nest ID ${nestID}`} key={nestID}>
@@ -284,6 +307,6 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
             </Modal>
         </div>
     )
-}
+};
 
-export default NFTShop;
+export default ManageNFTs;

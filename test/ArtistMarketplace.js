@@ -1,250 +1,304 @@
-const { expect } = require('chai');
-const { ethers } = require('hardhat');
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
-const toWei = (n) => ethers.utils.parseEther(n.toString());
-const fromWei = (n) => ethers.utils.formatEther(n);
+describe("Artist Contracts Test Suite", function () {
+  let ArtistMarketplace, artistMarketplace;
+  let ArtistMint, artistMint;
+  let ArtistWhiteList, artistWhiteList;
+  let Proposals, proposals;
+  let deployer, artist1, artist2, consumer;
+  let initialPrice = ethers.utils.parseEther("0.1"); // Example price
 
-describe("ArtistMarketplace", function () {
-    const NAME = 'ArtMarket';
-    const SYMBOL = 'AMART';
-    const NFT_NAME = "Test NFT";
-    const CREATOR_NAME = "Artist1";
-    const FILE_NAMES = ['file1', 'file2'];
-    const FILE_TYPES = ['type1', 'type2'];
-    const TOKEN_CIDS = ['cid1', 'cid2'];
-    const BYTES = "0x";
-    const PRICE_OF_NFT = toWei(1);
-    const LIST_PRICE = toWei(0.01);
+  beforeEach(async function () {
+    [deployer, artist1, artist2, consumer] = await ethers.getSigners();
 
-    let artistContract,
-    proposalsContract,
-    artistMinter,
-    contractCreator,
-    artist1,
-    artist2,
-    consumer,
-    consumer2;
+    // Deploy ArtistMarketplace
+    ArtistMarketplace = await ethers.getContractFactory("ArtistMarketplace");
+    artistMarketplace = await ArtistMarketplace.deploy();
+    await artistMarketplace.deployed();
 
-    beforeEach(async () => {
-        let accounts = await ethers.getSigners();
-        contractCreator = accounts[0];
-        artist1 = accounts[1];
-        artist2 = accounts[2];
-        consumer = accounts[3];
-        consumer2 = accounts[4];
+    // Deploy ArtistWhiteList
+    ArtistWhiteList = await ethers.getContractFactory("ArtistWhiteList");
+    artistWhiteList = await ArtistWhiteList.deploy();
+    await artistWhiteList.deployed();
 
-        const ArtistMarketplace = await ethers.getContractFactory("ArtistMarketplace");
-        artistContract = await ArtistMarketplace.deploy(artist1.address);
-        await artistContract.deployed();
+    // Deploy Proposals
+    Proposals = await ethers.getContractFactory("Proposals");
+    proposals = await Proposals.deploy(artistMarketplace.address, artistWhiteList.address);
+    await proposals.deployed();
 
-        const ProposalsContract = await hre.ethers.getContractFactory('Proposals')
-        proposalsContract = await ProposalsContract.deploy()
-        await proposalsContract.deployed()
+    // Deploy ArtistMint
+    ArtistMint = await ethers.getContractFactory("ArtistMint");
+    artistMint = await ArtistMint.deploy(artistMarketplace.address, artistWhiteList.address);
+    await artistMint.deployed();
 
- 
-        const ArtistMinter = await hre.ethers.getContractFactory('ArtistMint')
-        artistMinter = await ArtistMinter.deploy(artistContract.address)
-        await artistMinter.deployed()
+    // Set ArtistMint address in ArtistMarketplace
+    await artistMarketplace.setTokenCallAddress(artistMint.address);
 
+    // Initialize quorum in Proposals
+    await proposals.initializeQuorum();
+  });
 
-        await artistMinter.connect(contractCreator).addToWhtList(artist1.address, CREATOR_NAME);
+  describe("mintToken", function () {
+    it("should mint a token and create a listing", async function () {
+      const toWei = (n) => ethers.utils.parseEther(n.toString());
+      const fromWei = (n) => ethers.utils.formatEther(n);
 
-        await artistContract.connect(contractCreator).updateListPrice(LIST_PRICE);
+      const tokenData = {
+        supplyAmount: 10,
+        tokenId: 0, // placeholder
+        nftName: "ArtPiece",
+        artistName: "ArtistOne",
+        artistAddress: artist1.address,
+        ownerAddress: artistMarketplace.address,
+        sellerAddress: artist1.address,
+        nftPrice: ethers.utils.parseEther("1"),
+        currentlyListed: true
+      };
+
+      const fileData = {
+        fileNames: ["file1", "file2"],
+        fileTypes: ["type1", "type2"],
+        tokenCIDs: ["cid1", "cid2"],
+        nestIDs: [1, 2]
+      };
+
+      await artistWhiteList.addToWhtList(artist1.address, "ArtistOne");
+
+      const listPrice = toWei(0.02)
+      const mintPrice = listPrice.mul(tokenData.supplyAmount)
+      console.log("Mint Price: ", mintPrice.toString())
+
+      const tx = await artistMint.connect(artist1).mintToken(tokenData, fileData, [], {value: mintPrice});
+      await tx.wait();
+
+      // Check ArtistMint contract balance
+      const contractBalance = await ethers.provider.getBalance(artistMint.address);
+      console.log("Artist Mint Contract Balance: ", contractBalance.toString())
+
+      // Verify the listing
+      const listedToken = await artistMarketplace.getListedFromTokenId(1); // Assuming ID is 1
+      expect(listedToken.nftName).to.equal(tokenData.nftName);
+      expect(listedToken.supplyAmount).to.equal(tokenData.supplyAmount);
     });
+  });
 
-    it("should create a listed token and emit an event", async () => {
-        const SUPPLY_AMOUNT = 7;
-        const tokenId = 1;
+  describe("burnTokens", function () {
+    it("should burn tokens and refund", async function () {
+      const toWei = (n) => ethers.utils.parseEther(n.toString());
+      const fromWei = (n) => ethers.utils.formatEther(n);
 
-        // Calling createListedToken function
-        expect(
-            await artistContract.createListedToken(
-                tokenId,
-                NFT_NAME,
-                CREATOR_NAME,
-                artist1.address,
-                PRICE_OF_NFT,
-                FILE_NAMES,
-                FILE_TYPES,
-                TOKEN_CIDS,
-                SUPPLY_AMOUNT
-            )
-        ).to.emit(artistContract, 'TokenListedSuccess')
-            .withArgs(
-                SUPPLY_AMOUNT,
-                tokenId,
-                NFT_NAME,
-                CREATOR_NAME,
-                artist1.address,
-                artistContract.address,
-                artist1.address,
-                PRICE_OF_NFT,
-                FILE_NAMES,
-                FILE_TYPES,
-                TOKEN_CIDS,
-                true
-            );
+      // Mint tokens first
+      const tokenData = {
+        supplyAmount: 10,
+        tokenId: 0,
+        nftName: "ArtPiece",
+        artistName: "ArtistOne",
+        artistAddress: artist1.address,
+        ownerAddress: artistMarketplace.address,
+        sellerAddress: artist1.address,
+        nftPrice: ethers.utils.parseEther("1"),
+        currentlyListed: true
+      };
 
-        // Fetching the listed token
-        const listedToken = await artistContract.getListedFromTokenId(tokenId);
+      const fileData = {
+        fileNames: ["file1", "file2"],
+        fileTypes: ["type1", "type2"],
+        tokenCIDs: ["cid1", "cid2"],
+        nestIDs: [1, 2]
+      };
 
-        // Checking the listed token values
-        expect(listedToken.tokenId).to.equal(tokenId);
-        expect(listedToken.nftName).to.equal(NFT_NAME);
-        expect(listedToken.creatorName).to.equal(CREATOR_NAME);
-        expect(listedToken.creatorAddress).to.equal(artist1.address);
-        expect(listedToken.priceOfNFT).to.equal(PRICE_OF_NFT);
-        expect(listedToken.fileNames).to.deep.equal(FILE_NAMES);
-        expect(listedToken.fileTypes).to.deep.equal(FILE_TYPES);
-        expect(listedToken.tokenCIDs).to.deep.equal(TOKEN_CIDS);
-        expect(listedToken.supplyAmount).to.equal(SUPPLY_AMOUNT);
-        expect(listedToken.currentlyListed).to.be.true;
+      await artistWhiteList.addToWhtList(artist1.address, "ArtistOne");
+
+      const listPrice = toWei(0.02)
+      const mintPrice = listPrice.mul(tokenData.supplyAmount)
+      console.log("Mint Price: ", mintPrice.toString())
+
+      await artistMint.connect(artist1).mintToken(tokenData, fileData, [], {value: mintPrice});
+
+      // Check ArtistMint contract balance
+      const contractBalance = await ethers.provider.getBalance(artistMint.address);
+      console.log("Artist Mint Contract Balance: ", contractBalance.toString())
+
+      // Check token balance of Artist Marketplace contract
+      const contractBalance1 = await artistMint.balanceOf(artistMarketplace.address, 1)
+      console.log("Minted Tokens Before: ", contractBalance1.toString())
+
+      // Burn tokens
+      await artistMint.connect(artist1).burnTokens(1, 5);
+
+      // Check refund
+      const contractBalance2 = await artistMint.balanceOf(artistMarketplace.address, 1);
+      console.log("Minted Tokens After: ", contractBalance2.toString())
+      expect(contractBalance2).to.be.gt(0);
     });
+  });
 
-    it("should make sure the price isn't negative", async () => {
-        const tokenId = 1;
-        const INVALID_PRICE = 0;
-        const SUPPLY_AMOUNT = 5;
+  describe("transferRefund", function () {
+    it("should transfer refund correctly", async function () {
+      const toWei = (n) => ethers.utils.parseEther(n.toString());
+      const fromWei = (n) => ethers.utils.formatEther(n);
 
-        await expect(
-            artistContract.createListedToken(
-                tokenId,
-                NFT_NAME,
-                CREATOR_NAME,
-                artist1.address,
-                INVALID_PRICE,
-                FILE_NAMES,
-                FILE_TYPES,
-                TOKEN_CIDS,
-                SUPPLY_AMOUNT
-            )
-        ).to.be.revertedWith("Make sure the price isn't negative");
+      // Mint tokens and burn some to get a refund
+      const tokenData = {
+        supplyAmount: 10,
+        tokenId: 0,
+        nftName: "ArtPiece",
+        artistName: "ArtistOne",
+        artistAddress: artist1.address,
+        ownerAddress: artistMarketplace.address,
+        sellerAddress: artist1.address,
+        nftPrice: ethers.utils.parseEther("1"),
+        currentlyListed: true
+      };
+
+      const fileData = {
+        fileNames: ["file1", "file2"],
+        fileTypes: ["type1", "type2"],
+        tokenCIDs: ["cid1", "cid2"],
+        nestIDs: [1, 2]
+      };
+
+      const listPrice = toWei(0.02)
+      const mintPrice = listPrice.mul(tokenData.supplyAmount)
+      console.log("Mint Price: ", mintPrice.toString())
+
+      // Fund the contract with some Ether
+      await deployer.sendTransaction({
+        to: artistMint.address, 
+        value: ethers.utils.parseEther("5") // Fund contract with 5 Ether
+      });
+
+      console.log("Mint Contract Balance Before: ", (await ethers.provider.getBalance(artistMint.address)).toString())
+
+      await artistWhiteList.addToWhtList(artist1.address, "ArtistOne");
+
+      const balance = await ethers.provider.getBalance(artist1.address);
+      console.log("ArtistOne Balance: ", balance.toString())
+
+      await artistMint.connect(artist1).mintToken(tokenData, fileData, [], {value: mintPrice});
+
+      const balance1 = await ethers.provider.getBalance(artist1.address);
+      console.log("ArtistOne Balance Before: ", balance1.toString())
+
+      await artistMint.connect(artist1).burnTokens(1, 5);
+
+      // Transfer refund
+      const refundAmount = listPrice.mul(5);
+      console.log("Refund Amount: ", refundAmount.toString())
+      const tx = await artistMint.connect(artist1).transferRefund(5, artist1.address);
+      const receipt = await tx.wait();
+      console.log("Gas used:", receipt.gasUsed.toString());
+
+      // Check balance
+      console.log("Mint Contract Balance After: ", (await ethers.provider.getBalance(artistMint.address)).toString())
+      const balance2 = await ethers.provider.getBalance(artist1.address);
+      console.log("ArtistOne Balance After: ", balance2.toString())
+      expect(balance2).to.be.gt(refundAmount);
     });
+  });
 
-    describe("executeSale", function () {
-        const TOKEN_ID = 1;
-        const PURCHASE_AMOUNT = 3;
-        const SUPPLY_AMOUNT = 7;
+  describe("executeSale", function () {
+    it("should execute a sale correctly", async function () {
+      // Mint and list tokens
+      const tokenData = {
+        supplyAmount: 10,
+        tokenId: 0,
+        nftName: "ArtPiece",
+        artistName: "ArtistOne",
+        artistAddress: artist1.address,
+        ownerAddress: artistMarketplace.address,
+        sellerAddress: artist1.address,
+        nftPrice: ethers.utils.parseEther("1"),
+        currentlyListed: true
+      };
 
-        beforeEach(async () => {
-            await artistMinter.connect(artist1).createToken(
-                SUPPLY_AMOUNT, 
-                NFT_NAME, 
-                CREATOR_NAME, 
-                artist1.address, 
-                PRICE_OF_NFT, 
-                FILE_NAMES, 
-                FILE_TYPES, 
-                TOKEN_CIDS, 
-                BYTES,
-                { value: LIST_PRICE.mul(SUPPLY_AMOUNT) }
-            );
-        })
-        
-        it("should execute the sale correctly", async () => {
-            const sellerInitialBalance = await ethers.provider.getBalance(artist1.address);
-            const consumerInitialBalance = await ethers.provider.getBalance(consumer.address);
-            const salePrice = PRICE_OF_NFT.mul(PURCHASE_AMOUNT);
+      const fileData = {
+        fileNames: ["file1", "file2"],
+        fileTypes: ["type1", "type2"],
+        tokenCIDs: ["cid1", "cid2"],
+        nestIDs: [1, 2]
+      };
 
-            console.log(`ArtistContract: ${artistContract.address}\n`)
+      await artistWhiteList.addToWhtList(artist1.address, "ArtistOne");
+      await artistMint.mintToken(tokenData, fileData, []);
+      
+      // Execute sale
+      await artistMarketplace.executeSale(1, 1, { value: ethers.utils.parseEther("1") });
 
-            console.log(`ArtistMinter: ${artistMinter.address}\n`)
+      // Verify the sale
+      const listedToken = await artistMarketplace.getListedFromTokenId(1);
+      expect(listedToken.supplyAmount).to.equal(9); // One token sold
+    });
+  });
 
-            console.log(`Proposals: ${proposalsContract.address}\n`)
+  describe("deleteMultipleTokens", function () {
+    it("should delete tokens correctly", async function () {
+      const toWei = (n) => ethers.utils.parseEther(n.toString());
+      const fromWei = (n) => ethers.utils.formatEther(n);
 
-            const Token = await artistContract.connect(artist1).getListedFromTokenId(TOKEN_ID)
-            console.log("TokenId: ", Token)
+      // Mint and list tokens
+      const tokenData = {
+        supplyAmount: 10,
+        tokenId: 0,
+        nftName: "ArtPiece",
+        artistName: "ArtistOne",
+        artistAddress: artist1.address,
+        ownerAddress: artistMarketplace.address,
+        sellerAddress: artist1.address,
+        nftPrice: ethers.utils.parseEther("1"),
+        currentlyListed: true
+      };
 
-            const contractTokenBalance = await artistMinter.balanceOf(artistContract.address, TOKEN_ID)
-            console.log("balance: ", contractTokenBalance)
+      const fileData = {
+        fileNames: ["file1", "file2"],
+        fileTypes: ["type1", "type2"],
+        tokenCIDs: ["cid1", "cid2"],
+        nestIDs: [1, 2]
+      };
 
-            const consumerBalance = await artistMinter.balanceOf(consumer.address, TOKEN_ID);
-            console.log("Consumer Tokens: ", consumerBalance)
+      const listPrice = toWei(0.02)
+      const mintPrice = listPrice.mul(tokenData.supplyAmount)
+      console.log("Mint Price: ", mintPrice.toString())
 
-            const supply = await artistContract.connect(artist1).totalSupply()
-            console.log("supply: ", supply)
-    
-            // Approve marketplace to handle seller's tokens
-            //await artistMinter.connect(artist1).setApprovalForAll(artistContract.address, true);
-    
-            // Execute the sale
-            await artistContract.connect(consumer).executeSale(TOKEN_ID, PURCHASE_AMOUNT, { value: salePrice });
-    
-            // Check the updated supply amount
-            const listedToken = await artistContract.getListedFromTokenId(TOKEN_ID);
-            expect(listedToken.supplyAmount).to.equal(SUPPLY_AMOUNT - PURCHASE_AMOUNT);
-    
-            // Check the ownership update
-            expect(listedToken.ownerAddress).to.equal(consumer.address);
-            expect(listedToken.sellerAddress).to.equal(consumer.address);
-    
-            // Check if the token was transferred to the buyer
-            const consumerBalance2 = await artistMinter.balanceOf(consumer.address, TOKEN_ID);
-            console.log("Consumer Tokens: ", consumerBalance2)
-            expect(consumerBalance2).to.equal(PURCHASE_AMOUNT);
-            const contractTokenBalance2 = await artistMinter.balanceOf(artistContract.address, TOKEN_ID)
-            console.log("balance2: ", contractTokenBalance2)
-    
-            // Check if the proceeds were transferred to the seller
-            const sellerFinalBalance = await ethers.provider.getBalance(artist1.address);
-            const expectedBalance = sellerInitialBalance.add(PRICE_OF_NFT.mul(PURCHASE_AMOUNT));
+      await artistWhiteList.addToWhtList(artist1.address, "ArtistOne");
 
-            // Tolerance range (e.g., 0.1 ether)
-            const tolerance = toWei('0.1');
+      const balance = await ethers.provider.getBalance(artist1.address);
+      console.log("ArtistOne Balance: ", balance.toString())
 
-            expect(sellerFinalBalance).to.be.closeTo(expectedBalance, tolerance);
+      await artistMint.connect(artist1).mintToken(tokenData, fileData, [], {value: mintPrice});
 
-            //expect(sellerFinalBalance).to.equal(sellerInitialBalance.add(salePrice));
-    
-            // Ensure the buyer paid the correct amount
-            const consumerFinalBalance = await ethers.provider.getBalance(consumer.address);
-            expect(consumerInitialBalance.sub(consumerFinalBalance)).to.be.closeTo(salePrice, ethers.utils.parseEther("0.01")); // Considering gas fees
+      const balance1 = await ethers.provider.getBalance(artist1.address);
+      console.log("ArtistOne Balance Before: ", balance1.toString())
+      
+      // Delete tokens
+      await artistMarketplace.connect(artist1).deleteMultipleTokens(1, 5);
 
-            // consumer2 purchases the remaining tokens
-            await artistContract.connect(consumer2).executeSale(TOKEN_ID, PURCHASE_AMOUNT, { value: PRICE_OF_NFT.mul(PURCHASE_AMOUNT) });
-            const contractTokenBalance3 = await artistMinter.balanceOf(artistContract.address, TOKEN_ID)
-            console.log("balance3: ", contractTokenBalance3)
-        });
-    
-        it("should fail if purchase amount is greater than supply amount", async () => {
-            const excessivePurchaseAmount = SUPPLY_AMOUNT + 1;
+      // Check balance
+      const balance2 = await ethers.provider.getBalance(artist1.address);
+      console.log("ArtistOne Balance After: ", balance2.toString())
 
-            console.log(`ArtistContract: ${artistContract.address}\n`)
+      // Verify the deletion
+      const listedToken = await artistMarketplace.getListedFromTokenId(1);
+      expect(listedToken.supplyAmount).to.equal(5); // Five tokens remaining
+    });
+  });
 
-            // Approve marketplace to handle seller's tokens
-            await artistMinter.connect(artist1).setApprovalForAll(artistContract.address, true);
+  describe("transferFunds", function () {
+    it("should transfer funds correctly", async function () {
+      // Transfer funds to the marketplace
+      const transferAmount = ethers.utils.parseEther("1");
+      await deployer.sendTransaction({
+        to: artistMarketplace.address,
+        value: transferAmount
+      });
 
-            const Token = await artistContract.connect(artist1).getListedFromTokenId(TOKEN_ID)
-            console.log("TokenId: ", Token)
+      // Transfer funds from marketplace to artist1
+      await artistMarketplace.transferFunds(artist1.address, transferAmount);
 
-            await expect(
-                artistContract.connect(consumer).executeSale(TOKEN_ID, excessivePurchaseAmount, { value: PRICE_OF_NFT.mul(excessivePurchaseAmount) })
-            ).to.be.revertedWith("No remaining tokens to sell");
-        });
-    
-        it("should fail if incorrect value is sent", async () => {
-            const incorrectValue = PRICE_OF_NFT.mul(PURCHASE_AMOUNT).sub(ethers.utils.parseEther("0.1"));
-
-            await expect(
-                artistContract.connect(consumer).executeSale(TOKEN_ID, PURCHASE_AMOUNT, { value: incorrectValue })
-            ).to.be.revertedWith("Please submit the asking price in order to complete the purchase");
-        });
-    
-        /*it("should fail if marketplace is not approved to handle tokens", async () => {
-
-            const Token = await artistContract.connect(artist1).getListedFromTokenId(TOKEN_ID)
-            console.log("TokenId: ", Token)
-
-            // Approve marketplace to handle seller's tokens
-            await artistMinter.connect(artist1).setApprovalForAll(artistContract.address, false);
-
-            await expect(
-                artistContract.connect(consumer).executeSale(TOKEN_ID, PURCHASE_AMOUNT, { value: PRICE_OF_NFT.mul(PURCHASE_AMOUNT) })
-            ).to.be.revertedWith("Seller has not approved the marketplace");
-        });*/
-    })
+      // Check the balance of artist1
+      const balance = await ethers.provider.getBalance(artist1.address);
+      expect(balance).to.be.gt(transferAmount);
+    });
+  });
 });
-
-
-
-

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { Button, Form, Table, Spinner } from 'react-bootstrap';
 
 const toWei = (n) => ethers.utils.parseEther(n.toString())
+const fromWei = (n) => ethers.utils.formatEther(n)
 
 const Admin = ({ provider, artnft, whtList, pose, account }) => {
     const [userAddress, setUserAddress] = useState('')
@@ -11,6 +12,7 @@ const Admin = ({ provider, artnft, whtList, pose, account }) => {
     const [initialAddress, setInitialAddress] = useState('')
     const [initialNumber, setInitialNumber] = useState('')
     const [listPrice, setListPrice] = useState(0)
+    const [initialListPrice, setInitialListPrice] = useState(0)
     
     const initializeArtist = async () => {
         const signer = await provider.getSigner()
@@ -19,13 +21,22 @@ const Admin = ({ provider, artnft, whtList, pose, account }) => {
         await transaction.wait()
 
         const initializedInfo = await whtList.connect(signer).getUserByNumber(1)
+
         console.log(initializedInfo)
         console.log(initializedInfo.nameForAddress)
         console.log(initializedInfo.userAddress)
         console.log(initializedInfo.userNumber.toString())
+        
         setInitialName(initializedInfo.nameForAddress)
         setInitialAddress(initializedInfo.userAddress)
         setInitialNumber(initializedInfo.userNumber.toString())
+    }
+
+    const getListPrice = async () => {
+        const currentListPrice = await artnft.getListPrice()
+        const currentListPriceWei = fromWei(currentListPrice)
+        console.log(currentListPriceWei)
+        setInitialListPrice(currentListPriceWei)
     }
 
     const changeListPrice = async () => {
@@ -37,6 +48,10 @@ const Admin = ({ provider, artnft, whtList, pose, account }) => {
         const transaction = await artnft.connect(signer).updateListPrice(listPriceWei)
         await transaction.wait()
     }
+
+    useEffect(() => {
+        getListPrice();
+    }, []);
  
     return (
         <div className='padding-fromNav text-center'>
@@ -64,7 +79,7 @@ const Admin = ({ provider, artnft, whtList, pose, account }) => {
                     Add to White List
                 </Button>
             <p><strong>Update Listing Price</strong></p>
-            <p>Current Listing Price: {listPrice} ETH</p>
+            <p>Current Listing Price: {initialListPrice} ETH</p>
                 <Form.Control onChange={(e) => setListPrice(e.target.value)} size="lg" required type="text" placeholder="Enter new listing price in ETH" />
                 <Button onClick={changeListPrice} variant="primary" size="lg">
                     Change List Price

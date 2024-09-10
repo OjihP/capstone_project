@@ -27,6 +27,24 @@ html, body, #root {
   position: fixed;
 }
 
+.dropzone {
+  border: 2px black; 
+  border-radius: 5px; /* Optional: Rounded corners */
+  padding: 20px; /* Optional: Spacing inside the dropbox */
+  text-align: center; /* Center the text */
+  background-color: #f9f9f9; /* Optional: Light background color */
+}
+
+.dropzone:hover {
+  border-color: #0056b3; /* Change the border color on hover */
+  background-color: #e9ecef; /* Optional: Change background on hover */
+}
+
+
+.custom-offcanvas {
+  width: 800px; /* Adjust the width as needed */
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;

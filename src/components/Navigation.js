@@ -1,94 +1,70 @@
-import { useState, useEffect } from 'react'
-import { Navbar, Nav, Button, Container }  from 'react-bootstrap';
+import { useState, useEffect, useCallback } from 'react';
+import { Navbar, Nav, Button, Container } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import Dropdown from 'react-bootstrap/Dropdown';
 import DropdownButton from 'react-bootstrap/DropdownButton';
 import logo from '../music_note icon.png';
 
-const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handleShow, artnft, whtList, pose }) => {
-  const [isWhitelisted, setIsWhitelisted] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
+const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handleShow, artnft, whtList }) => {
+  const [isWhitelisted, setIsWhitelisted] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-
-  const getWhiteListedUsers = async () => {
-    setIsWhitelisted(false)
+  const getWhiteListedUsers = useCallback(async () => {
+    setIsWhitelisted(false);
     try {
-      const signer = await provider.getSigner()
-      
-      /*const usersOnWhtList = await artnft.connect(signer).getAllUsersOnWhiteList()
-      usersOnWhtList.forEach(user => {
-        console.log("User Address: ", user.userAddress);
-      })
-      console.log("All Users on WhiteList", usersOnWhtList.toString())*/
+      const signer = await provider.getSigner();
+      const count = await whtList.getWhtListTotal();
+      console.log(count.toString())
+      const items = [];
 
-      const count = await whtList._numbers()
-      const items = []
+      for (let i = 0; i < count; i++) {
+        const userInfo = await whtList.getUserByNumber(i + 1);
+        console.log(userInfo)
+        items.push(userInfo);
+      }
+      console.log(items)
 
-        for(var i = 0; i < count; i++) {
-            const userInfo = await whtList.whtList(i + 1)
-            items.push(userInfo)
-        }
-
-      // Check if the current user's address is in the whitelist
-      const currentUserAddress = await signer.getAddress()
-      const isCurrentUserWhitelisted = items.some(user => user.userAddress === currentUserAddress)
-      console.log(isCurrentUserWhitelisted)
-      setIsWhitelisted(isCurrentUserWhitelisted)
-
+      const currentUserAddress = await signer.getAddress();
+      const isCurrentUserWhitelisted = items.some(user => user.userAddress === currentUserAddress);
+      setIsWhitelisted(isCurrentUserWhitelisted);
     } catch (error) {
-      console.error('Error fetching whitelist:', error)
+      console.error('Error fetching whitelist:', error);
     }
-  }
+  }, [provider, account, whtList]);
 
-  const getAdmin = async () => {
-    setIsAdmin(false)
+  const getAdmin = useCallback(async () => {
+    setIsAdmin(false);
     try {
-      const signer = await provider.getSigner()
-
-      // Check if the current user's address is the Admin's address
-      const currentUserAddress = await signer.getAddress()
-      console.log("Current User Address: ", currentUserAddress)
-      const adminAddress = await artnft.connect(signer).getCreatorAddress()
-      console.log("Admin Address: ", adminAddress)
-      const isCreator = currentUserAddress === adminAddress
-      setIsAdmin(isCreator)
+      const signer = await provider.getSigner();
+      const currentUserAddress = await signer.getAddress();
+        console.log("currentUser:", currentUserAddress)
+      const adminAddress = await artnft.getCreatorAddress();
+        console.log("AdminAddress:", adminAddress)
+        const boolValue = currentUserAddress === adminAddress
+      setIsAdmin(currentUserAddress === adminAddress);
+      console.log("setIsAdmin:", boolValue )
     } catch (error) {
-      console.log('Error fetching Admin:', error)
+      console.error('Error fetching Admin:', error);
     }
-  }
+  }, [provider, artnft]);
 
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     const offset = window.scrollY;
     setIsScrolled(offset > 200);
-  };
+  }, []);
 
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [handleScroll]);
 
   useEffect(() => {
-    //console.log(account)
-    //console.log(isWhitelisted)
-    getWhiteListedUsers()
-    getAdmin()
-    //console.log("useEffect")
-  }, [account]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      if (scrollPosition > 0) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    if (account) {
+      getWhiteListedUsers();
+      getAdmin();
+    }
+  }, [account, getWhiteListedUsers, getAdmin]);
 
   return (
     <Navbar expand="lg" bg={isScrolled ? 'dark' : 'dark'} variant="dark" fixed="top">
@@ -103,11 +79,11 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
         <Navbar.Brand as={Link} to="/Home">Artist NFT Webpage Template</Navbar.Brand>
         <Navbar.Collapse className="justify-content-end">
           <Nav className="me-auto">
-              <Nav.Link as={Link} to="/Home">Home</Nav.Link>
-              <Nav.Link as={Link} to="/About">About</Nav.Link>
-              <Nav.Link as={Link} to="/Contact">Contact</Nav.Link>
-              <Nav.Link as={Link} to="/Donate">Donate</Nav.Link>
-              <Nav.Link as={Link} to="/NFTShop">NFT Shop</Nav.Link>
+            <Nav.Link as={Link} to="/Home">Home</Nav.Link>
+            <Nav.Link as={Link} to="/About">About</Nav.Link>
+            <Nav.Link as={Link} to="/Contact">Contact</Nav.Link>
+            <Nav.Link as={Link} to="/Donate">Donate</Nav.Link>
+            <Nav.Link as={Link} to="/NFTShop">NFT Shop</Nav.Link>
           </Nav>
           <Nav>
             <DropdownButton id="dropdown-basic-button" title="Menu" variant="outline-light">
@@ -118,22 +94,21 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
                   <Dropdown.Item onClick={web3Handler}>Connect Wallet</Dropdown.Item>
                 )}
               </Dropdown.Item>
-              {(account) && (!isWhitelisted) && (
-                <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/MyNFTs" style={{ color: 'black' }}>My NFTs</Nav.Link></Dropdown.Item>
+              {account && !isWhitelisted && (
+                <>
+                  <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/MyNFTs" style={{ color: 'black' }}>My NFTs</Nav.Link></Dropdown.Item>
+                  <Dropdown.Item className='text-center' variant="primary" onClick={handleShow}>Listen To Events</Dropdown.Item>
+                </>
               )}
-              {(account) && (!isWhitelisted) && ( 
-                <Dropdown.Item className='text-center' variant="primary" onClick={handleShow}>Listen To Events</Dropdown.Item> 
+              {account && isWhitelisted && (
+                <>
+                  <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Mint" style={{ color: 'black' }}>Mint</Nav.Link></Dropdown.Item>
+                  <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/WhiteList" style={{ color: 'black' }}>Whitelist Manager</Nav.Link></Dropdown.Item>
+                  <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/ManageNFTs" style={{ color: 'black' }}>Manage NFTs</Nav.Link></Dropdown.Item>
+                  <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Funds" style={{ color: 'black' }}>Manage Funds</Nav.Link></Dropdown.Item>
+                </>
               )}
-              {(isWhitelisted) && (
-                <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Mint" style={{ color: 'black' }}>Mint</Nav.Link></Dropdown.Item> 
-              )} 
-              {(isWhitelisted) && (
-                <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/WhiteList" style={{ color: 'black' }}>Whitelist Manager</Nav.Link></Dropdown.Item>
-              )}
-              {(isWhitelisted) && (
-                <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Funds" style={{ color: 'black' }}>Manage Funds</Nav.Link></Dropdown.Item>
-              )}
-              {(isAdmin) && (
+              {account && isAdmin && (
                 <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Admin" style={{ color: 'black' }}>Admin Functions</Nav.Link></Dropdown.Item>
               )}
             </DropdownButton>
@@ -157,6 +132,6 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
       </Container>
     </Navbar>
   );
-}
+};
 
 export default Navigation;
