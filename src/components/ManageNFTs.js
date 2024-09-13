@@ -218,7 +218,7 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
             setFileTypes(updatedFileTypes);
             setNestIDTabs(updatedNestIDTabs);*/
 
-            await artnft.connect(signer).deleteMultipleTokens(tokenId, burnAmount, account);
+            await artnft.connect(signer).deleteMultipleTokens(tokenId, burnAmount);
 
             loadUserNFTs();
     

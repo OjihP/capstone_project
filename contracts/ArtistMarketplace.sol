@@ -37,7 +37,7 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
         uint256 tokenId;
         string nftName;
         string artistName;
-        address artistAddress;
+        address payable artistAddress;
         address payable ownerAddress;
         address payable sellerAddress;
         uint256 nftPrice;
@@ -123,7 +123,7 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
             _tokenId,
             _nftName,
             _artistName,
-            _artistAddress,
+            payable(_artistAddress),
             _ownerAddress = payable(address(this)),
             _sellerAddress = payable(_artistAddress),
             _nftPrice,
@@ -153,10 +153,6 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
         require(msg.value >= _price * purchaseAmount, "Please submit the asking price in order to complete the purchase");
         require(_supplyAmount >= purchaseAmount, "No remaining tokens to sell");
 
-        for (uint256 i = 0; i < purchaseAmount; i++) {
-            tokenCall.safeTransferFrom(address(this), msg.sender, tokenId, 1, "");
-        }
-
         _supplyAmount -= purchaseAmount;
 
         listedToken.supplyAmount = _supplyAmount;
@@ -164,10 +160,28 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
         listedToken.ownerAddress = payable(msg.sender);
         listedToken.sellerAddress = payable(msg.sender);
 
+        for (uint256 i = 0; i < purchaseAmount; i++) {
+            tokenCall.safeTransferFrom(address(this), msg.sender, tokenId, 1, "");
+        }
+
         payable(seller).transfer(msg.value);
     }
 
-    function deleteMultipleTokens(uint256 tokenId, uint256 amount, address payable userAddress) external nonReentrant {
+    function replenishMultipleTokens(uint256 tokenId, uint256 mintAmount, bytes memory data) external payable nonReentrant {
+        ListedToken storage listedToken = idToListedToken[tokenId];
+        uint256 mintPrice = listPrice * mintAmount;
+
+        // Ensure enough ETH is sent to cover the minting cost
+        require(msg.value >= mintPrice, "Insufficient funds for minting");
+
+        // Call the ArtistMint contract and forward the value (msg.value)
+        tokenCall.restockTokens{value: msg.value}(tokenId, mintAmount, mintPrice, data);
+
+        // Update the supply in ArtistMarketplace after replenishment
+        listedToken.supplyAmount += mintAmount;
+    }
+
+    function deleteMultipleTokens(uint256 tokenId, uint256 amount) external nonReentrant {
         ListedToken storage listedToken = idToListedToken[tokenId];
 
         require(listedToken.supplyAmount >= amount, "Amount exceeds listed supply");
@@ -175,11 +189,8 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
         // Calculate the refund based on the listed price and the amount of tokens burned
         uint256 refundAmount = listPrice * amount;
 
-        // Ensure the contract creator has enough balance to refund
-        require(address(contractCreator).balance >= refundAmount, "Insufficient balance in contractCreator");
-
-        // Burn the tokens
-        tokenCall.burnTokens(tokenId, amount);
+        // Ensure the contract has enough balance to refund
+        require(address(tokenCall).balance >= refundAmount, "Insufficient balance in ArtistMint.sol");
 
         // Update the supply in your mapping
         listedToken.supplyAmount -= amount;
@@ -189,7 +200,10 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
             delete idToListedToken[tokenId];
         }
 
-        tokenCall.transferRefund(amount, userAddress);
+        tokenCall.transferRefund(refundAmount, listedToken.artistAddress);
+
+        // Burn the tokens
+        tokenCall.burnTokens(tokenId, amount);
     }
 
     function transferFunds(address payable _recipient, uint256 _amount) external {

@@ -16,6 +16,9 @@ contract ArtistMint is ERC1155, ArtistWhiteList, ReentrancyGuard {
     uint256 public listedPrice;
     address payable public contractCreator;
 
+    // Mapping to track pending refunds
+    mapping(address => uint256) public pendingRefunds;
+
     modifier onlyWhtListed() {
         //require(artistWhiteList.isWhitelisted(msg.sender), "Not whitelisted");
         _;
@@ -56,7 +59,7 @@ contract ArtistMint is ERC1155, ArtistWhiteList, ReentrancyGuard {
             tokenData.supplyAmount, 
             tokenData.nftName, 
             tokenData.artistName, 
-            tokenData.artistAddress,
+            payable(tokenData.artistAddress),
             payable(address(contractCall)), 
             payable(tokenData.artistAddress), 
             tokenData.nftPrice, 
@@ -70,12 +73,23 @@ contract ArtistMint is ERC1155, ArtistWhiteList, ReentrancyGuard {
             fileData.tokenCIDs, 
             fileData.nestIDs
         );
-        
-        /*// Transfer the listing fee to the ArtistMint.sol contract
-        (bool success, ) = address(this).call{value: listedPrice * tokenData.supplyAmount}("");
-        require(success, "Transfer failed");*/
 
         return newTokenId;
+    }
+
+    function restockTokens(uint256 tokenId, uint256 restockAmount, uint256 mintPrice, bytes memory data) public payable onlyWhtListed {
+        require(msg.value >= mintPrice, "Invalid cost");
+
+        // Mint the tokens for the specified amount
+        _mint(msg.sender, tokenId, restockAmount, data);
+
+        // Ensure the marketplace contract is approved to transfer the tokens
+        if (msg.sender != address(contractCall) && !isApprovedForAll(msg.sender, address(contractCall))) {
+            setApprovalForAll(address(contractCall), true);
+        }
+
+        // Transfer the minted tokens to the marketplace
+        safeTransferFrom(msg.sender, address(contractCall), tokenId, restockAmount, data);
     }
 
     function burnTokens(uint256 tokenId, uint256 amount) public onlyWhtListed {
@@ -83,21 +97,21 @@ contract ArtistMint is ERC1155, ArtistWhiteList, ReentrancyGuard {
         _burn(address(contractCall), tokenId, amount);
     }
 
-    function transferRefund(uint amount, address _recipient) public payable {
-
-
-        listedPrice = contractCall.getListPrice();
-
-        // Calculate the refund based on the listed price and the amount of tokens burned
-        uint256 refundAmount = listedPrice * amount;
-
-        // Ensure the contract creator has enough balance to refund
+    function transferRefund(uint refundAmount, address payable _recipient) public nonReentrant {
+        // Ensure the contract has enough balance to refund
         require(address(this).balance >= refundAmount, "Insufficient balance in ArtistMint");
 
-        // Transfer the refund to the user
-        //payable(msg.sender).transfer(refundAmount);
+        // Record the refund amount in the pending refunds mapping
+        pendingRefunds[_recipient] += refundAmount;
+
+        require(refundAmount > 0, "No pending refund available");
+
+        // Transfer the refund
         (bool success, ) = _recipient.call{value: refundAmount}("");
-        require(success, "Refund transfer failed");
+        require(success, "Refund Transfer failed");
+
+        // Reset the refund balance before transferring to prevent reentrancy attacks
+        pendingRefunds[_recipient] = 0;
     }
 
     receive() external payable {}

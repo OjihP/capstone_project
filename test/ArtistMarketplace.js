@@ -169,14 +169,13 @@ describe("Artist Contracts Test Suite", function () {
         value: ethers.utils.parseEther("5") // Fund contract with 5 Ether
       });
 
-      console.log("Mint Contract Balance Before: ", (await ethers.provider.getBalance(artistMint.address)).toString())
-
       await artistWhiteList.addToWhtList(artist1.address, "ArtistOne");
 
       const balance = await ethers.provider.getBalance(artist1.address);
       console.log("ArtistOne Balance: ", balance.toString())
 
       await artistMint.connect(artist1).mintToken(tokenData, fileData, [], {value: mintPrice});
+      console.log("Mint Contract Balance Before: ", (await ethers.provider.getBalance(artistMint.address)).toString())
 
       const balance1 = await ethers.provider.getBalance(artist1.address);
       console.log("ArtistOne Balance Before: ", balance1.toString())
@@ -188,7 +187,8 @@ describe("Artist Contracts Test Suite", function () {
       console.log("Refund Amount: ", refundAmount.toString())
       const tx = await artistMint.connect(artist1).transferRefund(5, artist1.address);
       const receipt = await tx.wait();
-      console.log("Gas used:", receipt.gasUsed.toString());
+      //console.log("Receipt", receipt)
+      //console.log("Gas used:", receipt.gasUsed.toString());
 
       // Check balance
       console.log("Mint Contract Balance After: ", (await ethers.provider.getBalance(artistMint.address)).toString())
@@ -232,6 +232,63 @@ describe("Artist Contracts Test Suite", function () {
     });
   });
 
+  describe("replenishMultipleTokens", function () {
+    it("should replenish multiple tokens correctly", async function () {
+      // Define the initial mint data
+      const initialSupplyAmount = 5;
+      const mintPrice = ethers.utils.parseEther("0.01").mul(initialSupplyAmount);
+      const nftName = "Test NFT";
+      const artistName = "Test Artist";
+      const nftPrice = ethers.utils.parseEther("0.05");
+
+      const tokenData = {
+        supplyAmount: initialSupplyAmount,
+        tokenId: 1,
+        nftName: nftName,
+        artistName: artistName,
+        artistAddress: artist1.address,
+        ownerAddress: artistMarketplace.address,
+        sellerAddress: artist1.address,
+        nftPrice: nftPrice,
+        currentlyListed: true
+      };
+
+      const fileData = {
+        fileNames: ["file1", "file2"],
+        fileTypes: ["type1", "type2"],
+        tokenCIDs: ["cid1", "cid2"],
+        nestIDs: [1, 2]
+      };
+  
+      await artistMint.connect(artist1).mintToken(tokenData, fileData, [], { value: mintPrice });
+
+      // Get contract balance after minting NFT
+      console.log("Contract Balance After Minting: ", (await ethers.provider.getBalance(artistMint.address)).toString())
+  
+      // Get the initial listed token details
+      let listedToken = await artistMarketplace.getListedFromTokenId(1);
+      expect(listedToken.supplyAmount).to.equal(initialSupplyAmount);
+  
+      // Replenish the token supply
+      const replenishAmount = 3;
+      const replenishCost = ethers.utils.parseEther("0.01").mul(replenishAmount);
+  
+      await artistMarketplace.connect(artist1).replenishMultipleTokens(
+        1,
+        replenishAmount,
+        ethers.utils.randomBytes(32), // Some arbitrary data
+        { value: replenishCost }
+      );
+  
+      // Check the updated token supply after replenishment
+      listedToken = await artistMarketplace.getListedFromTokenId(1);
+      expect(listedToken.supplyAmount).to.equal(initialSupplyAmount + replenishAmount);
+
+      // Check the balance of ArtistMint.sol
+      console.log("Mint Contract Balance After: ", (await ethers.provider.getBalance(artistMint.address)).toString())
+    });
+  })
+
   describe("deleteMultipleTokens", function () {
     it("should delete tokens correctly", async function () {
       const toWei = (n) => ethers.utils.parseEther(n.toString());
@@ -258,6 +315,8 @@ describe("Artist Contracts Test Suite", function () {
       };
 
       const listPrice = toWei(0.02)
+      await artistMarketplace.updateListPrice(listPrice)
+
       const mintPrice = listPrice.mul(tokenData.supplyAmount)
       console.log("Mint Price: ", mintPrice.toString())
 
@@ -267,6 +326,7 @@ describe("Artist Contracts Test Suite", function () {
       console.log("ArtistOne Balance: ", balance.toString())
 
       await artistMint.connect(artist1).mintToken(tokenData, fileData, [], {value: mintPrice});
+      console.log("Mint Contract Balance Before: ", (await ethers.provider.getBalance(artistMint.address)).toString())
 
       const balance1 = await ethers.provider.getBalance(artist1.address);
       console.log("ArtistOne Balance Before: ", balance1.toString())
@@ -277,6 +337,7 @@ describe("Artist Contracts Test Suite", function () {
       // Check balance
       const balance2 = await ethers.provider.getBalance(artist1.address);
       console.log("ArtistOne Balance After: ", balance2.toString())
+      console.log("Mint Contract Balance After: ", (await ethers.provider.getBalance(artistMint.address)).toString())
 
       // Verify the deletion
       const listedToken = await artistMarketplace.getListedFromTokenId(1);

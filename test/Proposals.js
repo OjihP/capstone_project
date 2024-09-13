@@ -23,7 +23,7 @@ describe("Proposals Contract", function () {
 
     // Deploy ArtistMarketplace contract
     ArtistMarketplace = await ethers.getContractFactory("ArtistMarketplace");
-    artistMarketplace = await ArtistMarketplace.deploy(artist.address);
+    artistMarketplace = await ArtistMarketplace.deploy();
     await artistMarketplace.deployed();
 
     // Deploy Proposals contract after the whitelist has been populated
@@ -133,6 +133,7 @@ describe("Proposals Contract", function () {
 
     const tx = await proposals.finalizeProposal(proposalId);
     const receipt = await tx.wait();
+    console.log(receipt)
 
     const proposal = await proposals.proposals(proposalId);
     expect(proposal.finalized).to.equal(true);
