@@ -7,14 +7,13 @@ import "./ArtistWhiteList.sol";
 contract Proposals {
     using Counters for Counters.Counter;
 
-    uint256 public proposalCount;
-    uint256 public quorum;
-    ArtistMarketplace public contractCall;
-    ArtistWhiteList public listCall;
-    uint256 public whtListTotal;
+    uint256 private proposalCount;
+    uint256 private quorum;
+    ArtistMarketplace private artistMarketplace;
+    ArtistWhiteList private artistWhiteList;
 
-    mapping(uint256 => Proposal) public proposals;
-    mapping(address => mapping(uint256 => bool)) public votes;
+    mapping(uint256 => Proposal) private proposals;
+    mapping(address => mapping(uint256 => bool)) private votes;
 
     struct Proposal {
         uint256 id;
@@ -37,15 +36,25 @@ contract Proposals {
     event Finalize(uint256 id);
 
     constructor(address payable marketplaceAddress, address whiteListAddress) {
-        contractCall = ArtistMarketplace(marketplaceAddress);
-        listCall = ArtistWhiteList(whiteListAddress);
+        artistMarketplace = ArtistMarketplace(marketplaceAddress);
+        artistWhiteList = ArtistWhiteList(whiteListAddress);
     }
 
-    function initializeQuorum() public returns (uint256) {
+    function initializeQuorum() external returns (uint256) {
         // Set quorum based on the number of white listed users
-        whtListTotal = listCall.getWhtListTotal();
+        uint256 totalListed = artistWhiteList.getCurrentWhtListCounter();
+        ArtistWhiteList.UserInfo[] memory totalWhtListedArray;
+        
+        for (uint256 i = 1; i < totalListed; i++) {
+            ArtistWhiteList.UserInfo memory userInfo = artistWhiteList.getUserByNumber(i);
+            if (userInfo.isListed == true) {
+                totalWhtListedArray[i] = userInfo;
+            }
+        }
 
-        uint256 numerator = whtListTotal * 70;
+        uint256 totalWhtListed = totalWhtListedArray.length;
+        
+        uint256 numerator = totalWhtListed * 70;
         uint256 denominator = 100;
         uint256 quotient = numerator / denominator;
         uint256 remainder = numerator % denominator;
@@ -115,10 +124,10 @@ contract Proposals {
 
         require(!proposal.finalized, "Proposal already finalized");
         require(proposal.votes >= quorum, "Must reach quorum to finalize proposal");
-        require(address(contractCall).balance >= proposal.amount, "Amount exceeds contract funds");
+        require(address(artistMarketplace).balance >= proposal.amount, "Amount exceeds contract funds");
 
         // Transfer the funds to recipient from marketplace contract
-        contractCall.transferFunds(proposal.recipient, proposal.amount);
+        artistMarketplace.transferFunds(proposal.recipient, proposal.amount);
 
         proposal.finalized = true;
 

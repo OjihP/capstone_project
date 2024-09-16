@@ -20,11 +20,11 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
     using Strings for uint256;
     using Counters for Counters.Counter;
 
-    address payable public contractCreator;
-    ArtistMint public tokenCall;
-    uint256 public listPrice;
+    address payable private contractCreator;
+    ArtistMint private artistMint;
+    uint256 private listPrice;
 
-    // Define a struct to group file-related data
+    // Struct to hold necessary file data for NFT
     struct FileData {
         string[] fileNames;
         string[] fileTypes;
@@ -32,6 +32,7 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
         uint256[] nestIDs;
     }
 
+    // Struct to hold necessary NFT data
     struct ListedToken {
         uint256 supplyAmount;
         uint256 tokenId;
@@ -44,8 +45,8 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
         bool currentlyListed;
     }
 
-    // Mappings to store token data
-    mapping(uint256 => ListedToken) public idToListedToken;
+    // Mappings to store token data for NFT
+    mapping(uint256 => ListedToken) private idToListedToken;
     mapping(uint256 => FileData) private idToFileData;
 
     // Event emitted when a token is successfully listed
@@ -67,37 +68,38 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
     }
 
     function setTokenCallAddress(address payable _tokenCallAddress) external onlyOwner {
-        tokenCall = ArtistMint(_tokenCallAddress);
+        artistMint = ArtistMint(_tokenCallAddress);
     }
 
-    function updateListPrice(uint256 _listPrice) public onlyOwner {
+    function updateListPrice(uint256 _listPrice) external onlyOwner {
         listPrice = _listPrice;
     }
 
-    function getCreatorAddress() public view returns (address) {
+    function getCreatorAddress() external view returns (address) {
         return contractCreator;
     }
 
-    function getListPrice() public view returns (uint256) {
+    function getListPrice() external view returns (uint256) {
         return listPrice;
     }
 
-    function getListedFromTokenId(uint256 tokenId) public view returns (ListedToken memory) {
-        return idToListedToken[tokenId];
+    function getListedFromTokenId(uint256 _tokenId) external view returns (ListedToken memory) {
+        return idToListedToken[_tokenId];
     }
 
-    function getFileDataFromTokenId(uint256 tokenId) public view returns (FileData memory) {
-        return idToFileData[tokenId];
+    function getFileDataFromTokenId(uint256 _tokenId) external view returns (FileData memory) {
+        return idToFileData[_tokenId];
     }
 
+    // Logs data into mapping
     function createListedFileData(
-        uint256 tokenId,
+        uint256 _tokenId,
         string[] memory _fileNames,
         string[] memory _fileTypes,
         string[] memory _tokenCIDs,
         uint256[] memory _nestIDs
-    ) public {
-        idToFileData[tokenId] = FileData(
+    ) external {
+        idToFileData[_tokenId] = FileData(
             _fileNames,
             _fileTypes,
             _tokenCIDs,
@@ -105,6 +107,7 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
         );
     }
 
+    // Logs data into mapping, and emits event
     function createListedToken(
         uint256 _tokenId,
         uint256 _supplyAmount,
@@ -115,7 +118,7 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
         address payable _sellerAddress,
         uint256 _nftPrice,
         bool _currentlyListed
-    ) public payable {
+    ) external payable {
         require(_nftPrice > 0, "Make sure the price isn't negative");
 
         idToListedToken[_tokenId] = ListedToken(
@@ -144,8 +147,8 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
         );
     }
 
-    function executeSale(uint256 tokenId, uint256 purchaseAmount) public payable {
-        ListedToken storage listedToken = idToListedToken[tokenId];
+    function executeSale(uint256 _tokenId, uint256 purchaseAmount) external payable {
+        ListedToken storage listedToken = idToListedToken[_tokenId];
         uint256 _supplyAmount = listedToken.supplyAmount;
         uint256 _price = listedToken.nftPrice;
         address payable seller = listedToken.sellerAddress;
@@ -155,34 +158,39 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
 
         _supplyAmount -= purchaseAmount;
 
-        listedToken.supplyAmount = _supplyAmount;
-        listedToken.currentlyListed = _supplyAmount > 0;
-        listedToken.ownerAddress = payable(msg.sender);
-        listedToken.sellerAddress = payable(msg.sender);
-
         for (uint256 i = 0; i < purchaseAmount; i++) {
-            tokenCall.safeTransferFrom(address(this), msg.sender, tokenId, 1, "");
+            artistMint.safeTransferFrom(address(this), msg.sender, _tokenId, 1, "");
         }
 
         payable(seller).transfer(msg.value);
+
+        listedToken.supplyAmount = _supplyAmount;
+        if (listedToken.supplyAmount == 0) {
+            idToListedToken[_tokenId].currentlyListed = false;
+        }
+        listedToken.ownerAddress = payable(msg.sender);
+        listedToken.sellerAddress = payable(msg.sender);
     }
 
-    function replenishMultipleTokens(uint256 tokenId, uint256 mintAmount, bytes memory data) external payable nonReentrant {
-        ListedToken storage listedToken = idToListedToken[tokenId];
+    function replenishNFTTokens(uint256 _tokenId, uint256 mintAmount, bytes memory data) external payable nonReentrant {
+        ListedToken storage listedToken = idToListedToken[_tokenId];
         uint256 mintPrice = listPrice * mintAmount;
 
         // Ensure enough ETH is sent to cover the minting cost
         require(msg.value >= mintPrice, "Insufficient funds for minting");
 
         // Call the ArtistMint contract and forward the value (msg.value)
-        tokenCall.restockTokens{value: msg.value}(tokenId, mintAmount, mintPrice, data);
+        artistMint.mintTokens{value: msg.value}(_tokenId, mintAmount, mintPrice, data);
 
         // Update the supply in ArtistMarketplace after replenishment
         listedToken.supplyAmount += mintAmount;
+        if (listedToken.supplyAmount > 0) {
+            idToListedToken[_tokenId].currentlyListed = true;
+        }
     }
 
-    function deleteMultipleTokens(uint256 tokenId, uint256 amount) external nonReentrant {
-        ListedToken storage listedToken = idToListedToken[tokenId];
+    function deleteNFTTokens(uint256 _tokenId, uint256 amount) external nonReentrant {
+        ListedToken storage listedToken = idToListedToken[_tokenId];
 
         require(listedToken.supplyAmount >= amount, "Amount exceeds listed supply");
 
@@ -190,25 +198,26 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
         uint256 refundAmount = listPrice * amount;
 
         // Ensure the contract has enough balance to refund
-        require(address(tokenCall).balance >= refundAmount, "Insufficient balance in ArtistMint.sol");
+        require(address(artistMint).balance >= refundAmount, "Insufficient balance in ArtistMint.sol");
 
         // Update the supply in your mapping
         listedToken.supplyAmount -= amount;
 
         // If all tokens are burned, remove the listing
         if (listedToken.supplyAmount == 0) {
-            delete idToListedToken[tokenId];
+            idToListedToken[_tokenId].currentlyListed = false;
         }
 
-        tokenCall.transferRefund(refundAmount, listedToken.artistAddress);
+        artistMint.transferRefund(refundAmount, listedToken.artistAddress);
 
         // Burn the tokens
-        tokenCall.burnTokens(tokenId, amount);
+        artistMint.burnTokens(_tokenId, amount);
     }
 
-    function transferFunds(address payable _recipient, uint256 _amount) external {
-        require(address(this).balance >= _amount, "Insufficient balance in ArtistMarketplace");
-        (bool success, ) = _recipient.call{value: _amount}("");
+    // Transfers funds from ArtistMarketplace contract to recipient via a proposal
+    function transferFunds(address payable recipient, uint256 amount) external {
+        require(address(this).balance >= amount, "Insufficient balance in ArtistMarketplace");
+        (bool success, ) = recipient.call{value: amount}("");
         require(success, "Transfer failed");
     }
 
