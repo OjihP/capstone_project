@@ -7,7 +7,7 @@ import "./ArtistWhiteList.sol";
 contract Proposals {
     using Counters for Counters.Counter;
 
-    uint256 private proposalCount;
+    Counters.Counter private proposalCount;
     uint256 private quorum;
     ArtistMarketplace private artistMarketplace;
     ArtistWhiteList private artistWhiteList;
@@ -40,6 +40,18 @@ contract Proposals {
         artistWhiteList = ArtistWhiteList(whiteListAddress);
     }
 
+    function getProposalCount() external view returns (uint256) {
+        return proposalCount.current();
+    }
+
+    function getProposalFromProposalId(uint256 proposalId) external view returns (Proposal memory) {
+        return proposals[proposalId];
+    }
+
+    function getQuorum() external view returns (uint256) {
+        return quorum;
+    }
+
     function initializeQuorum() external returns (uint256) {
         // Set quorum based on the number of white listed users
         uint256 totalListed = artistWhiteList.getCurrentWhtListCounter();
@@ -69,10 +81,6 @@ contract Proposals {
         return quorum;
     }
 
-    function getQuorum() public view returns (uint256) {
-        return quorum;
-    }
-
     // Create proposal
     function createProposal(
         string memory _name,
@@ -81,10 +89,11 @@ contract Proposals {
         address payable _recipient,
         uint256 _recipientBalance
     ) public {
-        proposalCount++;
+        proposalCount.increment();
+        uint proposalId = proposalCount.current();
 
-        proposals[proposalCount] = Proposal(
-            proposalCount,
+        proposals[proposalId] = Proposal(
+            proposalId,
             _name,
             _description,
             _amount,
@@ -95,7 +104,7 @@ contract Proposals {
         );
 
         emit Propose(
-            proposalCount,
+            proposalId,
             _amount,
             _recipient,
             msg.sender
@@ -114,7 +123,7 @@ contract Proposals {
         emit Vote(_id, msg.sender);
     }
 
-    function hasVoted(address user, uint256 proposalId) public view returns (bool) {
+    function hasVoted(address user, uint256 proposalId) external view returns (bool) {
         return votes[user][proposalId];
     }
 

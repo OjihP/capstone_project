@@ -32,7 +32,7 @@ const MyNFTs = ({ provider, artnft, minter, account }) => {
   const getMyNFTs = async () => {
     try {
       const signer = await provider.getSigner();
-      const count = await minter.tokenSupply();
+      const count = await minter.getCurrentTokenCounter();
       console.log('tokenIds: ', count.toString());
       const tokenIdArray = [];
       const fileDataIdArray = [];

@@ -21,6 +21,7 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
     const [_tokenIdArray, setTokenIdArray] = useState([])
     const [_fileDataIdArray, setFileDataIdArray] = useState([])
     const [burnAmount, setBurnAmount] = useState(0)
+    const [mintAmount, setMintAmount] = useState('');
     //const [timeStamp, setTokenTimeStamp] = useState(0)
 
     const handleClose = () => setShow(false);
@@ -33,7 +34,7 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
     const loadUserNFTs = async () => {
         try {
             const signer = await provider.getSigner();
-            const count = await minter.tokenSupply();
+            const count = await minter.getCurrentTokenCounter();
             const mintContractBalance = await provider.getBalance('0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9');
             console.log("Mint Contract Balance", mintContractBalance.toString())
             const tokenIdArray = [];
@@ -42,7 +43,7 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
             // Retrieve token IDs
             for (let i = 0; i < count; i++) {
                 try {
-                    const tokenInfo = await artnft.idToListedToken(i + 1);
+                    const tokenInfo = await artnft.getListedFromTokenId(i + 1);
 
                     // Check if the creatorAddress matches the account
                     if (tokenInfo.artistAddress.toLowerCase() === account.toLowerCase()) {
@@ -177,6 +178,23 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
         return null;
     };
 
+    const addNFT = async (index) => {
+        try {
+            const signer = await provider.getSigner();
+            const tokenId = _tokenIdArray[index]
+            console.log(tokenId)
+            console.log(await artnft.getListedFromTokenId(tokenId))
+
+            await artnft.connect(signer).replenishNFTTokens(tokenId, mintAmount, ethers.utils.hexlify([]));
+
+            loadUserNFTs();
+    
+            console.log(`Replenished NFT Tokens at index: ${tokenId}`);
+        } catch (error) {
+            console.error("Error adding NFT Tokens:", error);
+        }
+    };
+
     const deleteNFT = async (index) => {
         try {
             const signer = await provider.getSigner();
@@ -228,7 +246,6 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
         }
     };
     
-
     const changeNFT = async () => {
 
     }
@@ -262,19 +279,22 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
                                         onClick={() => handleShow(index, tokenId)}
                                     />
                                     <Card.Footer> 
-                                        <div style={{ color: 'white', fontSize: '0.8rem' }}>
+                                        <div style={{ color: 'white', fontSize: '0.7rem' }}>
                                             <p>
                                                 Amount: {listedAmounts[index].toString()} Left <br />
                                                 Price: {listedPrice[index].toString()} ETH
                                                 <InputGroup>
-                                                    <Button onClick={() => deleteNFT(index)} style={{ width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
+                                                    <Button onClick={() => addNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
+                                                        Add NFT
+                                                    </Button>
+                                                    <Form.Control onChange={(e) => setMintAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to mint" aria-descibedby="basic-addon1" />
+                                                </InputGroup>
+                                                <InputGroup>
+                                                    <Button onClick={() => deleteNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
                                                         Delete NFT
                                                     </Button>
-                                                    <Form.Control onChange={(e) => setBurnAmount(e.target.value)} style={{ height: "30px", width: "1px" }} aria-label="Amount to burn" aria-descibedby="basic-addon1" />
+                                                    <Form.Control onChange={(e) => setBurnAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to burn" aria-descibedby="basic-addon1" />
                                                 </InputGroup>
-                                                <Button onClick={() => changeNFT()} style={{ width: "100px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
-                                                    Change NFT
-                                                </Button>
                                             </p>
                                         </div>
                                     </Card.Footer>

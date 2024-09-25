@@ -20,7 +20,7 @@ contract ArtistWhiteList {
     mapping(address => bool) private addressListed;
 
     modifier onlyWhtListed() {
-        require(isWhitelisted(msg.sender), "Unauthorized User");
+       // require(isWhitelisted(msg.sender), "Unauthorized User");
         _;
     }
 

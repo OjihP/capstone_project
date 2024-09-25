@@ -31,7 +31,7 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
     const loadAllNFTs = async () => {
         try {
             const signer = await provider.getSigner();
-            const count = await minter.tokenSupply();
+            const count = await minter.getCurrentTokenCounter();
             const tokenIdArray = [];
             const fileDataIdArray = [];
 
@@ -47,7 +47,7 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
             // Retrieve token IDs
             for (let i = 0; i < count; i++) {
                 try {
-                    const tokenInfo = await artnft.idToListedToken(i + 1); // Ensure idToListedToken is defined in the contract
+                    const tokenInfo = await artnft.getListedFromTokenId(i + 1); // Ensure idToListedToken is defined in the contract
                     tokenIdArray.push(tokenInfo.tokenId);
                     fileDataIdArray.push(tokenInfo.tokenId);
                     console.log(`Token ID ${i + 1}:`, tokenInfo.tokenId.toString());

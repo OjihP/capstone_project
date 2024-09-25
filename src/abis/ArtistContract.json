@@ -235,23 +235,10 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "contractCreator",
-    "outputs": [
-      {
-        "internalType": "address payable",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "_tokenId",
         "type": "uint256"
       },
       {
@@ -337,7 +324,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "_tokenId",
         "type": "uint256"
       },
       {
@@ -346,7 +333,7 @@
         "type": "uint256"
       }
     ],
-    "name": "deleteMultipleTokens",
+    "name": "deleteNFTTokens",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -355,7 +342,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "_tokenId",
         "type": "uint256"
       },
       {
@@ -405,7 +392,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "_tokenId",
         "type": "uint256"
       }
     ],
@@ -459,7 +446,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "_tokenId",
         "type": "uint256"
       }
     ],
@@ -488,7 +475,7 @@
             "type": "string"
           },
           {
-            "internalType": "address",
+            "internalType": "address payable",
             "name": "artistAddress",
             "type": "address"
           },
@@ -524,65 +511,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "idToListedToken",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "supplyAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "nftName",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "artistName",
-        "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "artistAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "address payable",
-        "name": "ownerAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "address payable",
-        "name": "sellerAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "nftPrice",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "currentlyListed",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "owner",
         "type": "address"
@@ -599,19 +527,6 @@
         "internalType": "bool",
         "name": "",
         "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "listPrice",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -750,6 +665,29 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "_tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "mintAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "replenishNFTTokens",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "from",
         "type": "address"
@@ -819,7 +757,7 @@
   {
     "inputs": [
       {
-        "internalType": "address",
+        "internalType": "address payable",
         "name": "_tokenCallAddress",
         "type": "address"
       }
@@ -875,19 +813,6 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "tokenCall",
-    "outputs": [
-      {
-        "internalType": "contract ArtistMint",
-        "name": "",
-        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -976,12 +901,12 @@
     "inputs": [
       {
         "internalType": "address payable",
-        "name": "_recipient",
+        "name": "recipient",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "_amount",
+        "name": "amount",
         "type": "uint256"
       }
     ],

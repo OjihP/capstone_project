@@ -169,7 +169,6 @@ function App() {
     await fetchPastEvents();
     startListeningToEvents();
   };
-
   
   useEffect(() => {
     if (isLoading) {
@@ -210,14 +209,14 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="/donate" element={<Donate provider={provider} artnft={artnft} account={account} />} />
+        <Route path="/donate" element={<Donate provider={provider} artnft={artnft} whtList={whtList} account={account} />} />
         <Route path="/nftshop" element={<NFTShop provider={provider} artnft={artnft} account={account} minter={minter} />} />
         <Route path="/myNFTs" element={<MyNFTs provider={provider} artnft={artnft} minter={minter} account={account} fileItemArray={_fileItemArray} />} />
         <Route path="/mint" element={<Mint provider={provider} artnft={artnft} account={account} minter={minter} whtList={whtList} setFileItemArray={setFileItemArray} />} />
         <Route path="/whiteList" element={<WhiteList provider={provider} artnft={artnft} whtList={whtList} pose={pose} account={account} />} />
-        <Route path="/funds" element={<Funds provider={provider} artnft={artnft} pose={pose} account={account} />} />
+        <Route path="/funds" element={<Funds provider={provider} artnft={artnft} minter={minter} pose={pose} account={account} />} />
         <Route path="/manageNFTs" element={<ManageNFTs provider={provider} artnft={artnft} minter={minter} account={account} fileItemArray={_fileItemArray} />} />
-        <Route path="/admin" element={<Admin provider={provider} artnft={artnft} whtList={whtList} pose={pose} account={account} />} />
+        <Route path="/admin" element={<Admin provider={provider} artnft={artnft} minter={minter} whtList={whtList} pose={pose} account={account} />} />
       </Routes>
 
       <Offcanvas show={show} onHide={handleClose} placement="end" className="custom-offcanvas">

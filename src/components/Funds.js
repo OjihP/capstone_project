@@ -4,7 +4,7 @@ import { Button, Form, Table, Spinner } from 'react-bootstrap';
 
 const toWei = (n) => ethers.utils.parseEther(n.toString());
 
-const Funds = ({ provider, artnft, account, pose }) => {
+const Funds = ({ provider, account, artnft, minter, pose }) => {
   const [balance, setBalance] = useState(0);
   const [proposals, setProposals] = useState([]);
   const [quorum, setQuorum] = useState(0);
@@ -29,19 +29,19 @@ const Funds = ({ provider, artnft, account, pose }) => {
         // Fetch quorum and whitelisted users total
         const Korum = await pose.getQuorum();
         setQuorum(Korum);
-        const whtListTotal = await pose.whtListTotal();
+        const whtListTotal = await minter.getCurrentWhtListCounter();
         console.log("Quorum: ", Korum.toString());
         console.log("Whitelisted Users Total: ", whtListTotal.toString());
 
         // Fetch proposals count
-        const count = await pose.connect(signer).proposalCount();
+        const count = await pose.connect(signer).getProposalCount();
         const items = [];
 
         // Track user votes
         const votes = {};
 
         for (var i = 0; i < count; i++) {
-            const proposal = await pose.connect(signer).proposals(i + 1);
+            const proposal = await pose.connect(signer).getProposalFromProposalId(i + 1);
             items.push(proposal);
 
             // Check if the user has voted on this proposal

@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { Button, Form, InputGroup } from 'react-bootstrap';
 
-const Donate = ({ provider, account }) => {
+const Donate = ({ provider, account, whtList }) => {
     const [donateAmount, setDonateAmount] = useState(0);
-    //const [provider, setProvider] = useState(null);
+    const [donationName, setDonatorName] = useState('')
     //const [account, setAccount] = useState(null);
 
     const handleDonate = async () => {
@@ -12,6 +12,7 @@ const Donate = ({ provider, account }) => {
             console.error('Provider or account is not initialized.');
             return;
         }
+        console.log("made it here")
 
         // Convert donation amount to wei
         const donationInWei = ethers.utils.parseEther(donateAmount.toString());
@@ -33,6 +34,8 @@ const Donate = ({ provider, account }) => {
             value: donationInWei,
         };
 
+        console.log("made it here")
+
         // Sign and send the transaction
         try {
             const txResponse = await signer.sendTransaction(tx);
@@ -40,10 +43,20 @@ const Donate = ({ provider, account }) => {
         } catch (error) {
             console.error('Error sending transaction:', error.message);
         }
+
+        console.log("made it here")
+
+        if (donateAmount >= 0.005) {
+            await whtList.connect(signer).addToWhtList(account, donationName)
+        }
     }
 
     const handleAmountChange = (e) => {
         setDonateAmount(e.target.value);
+    }
+
+    const handleNameChange = (e) => {
+        setDonatorName(e.target.value);
     }
 
     return (
@@ -52,9 +65,6 @@ const Donate = ({ provider, account }) => {
                 <strong>Donate</strong>
             </p>
             <InputGroup className="mb-3">
-                <Button onClick={handleDonate} variant="primary" id="button-addon1">
-                    Donate!
-                </Button>
                 <Form.Control
                     onChange={handleAmountChange}
                     style={{ width: '10px' }}
@@ -65,7 +75,23 @@ const Donate = ({ provider, account }) => {
                     aria-label="Donation Amount"
                     aria-describedby="basic-addon1"
                 />
+                <Form.Control
+                    onChange={handleNameChange}
+                    style={{ width: '10px' }}
+                    size="sm"
+                    required
+                    type="text"
+                    placeholder="Name of Donator"
+                    aria-label="Donator Name"
+                    aria-describedby="basic-addon1"
+                />
+                <Button onClick={handleDonate} variant="primary" id="button-addon1">
+                    Donate!
+                </Button>
             </InputGroup>
+            <p>
+                If you would like to donate, please enter the amount in ETH along with a name. If you donate above $13, you will be automatically be added to the whitelist.
+            </p>
         </div>
     );
 };

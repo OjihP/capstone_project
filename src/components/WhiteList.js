@@ -19,7 +19,7 @@ const WhiteList = ({ provider, whtList, account }) => {
         const signer = await provider.getSigner();
         const userNumberInt = parseInt(userNumber, 10);
 
-        const totalUsers = await whtList.getWhtListTotal();
+        const totalUsers = await whtList.getCurrentWhtListCounter();
         if (userNumberInt > totalUsers || userNumberInt <= 0) {
             alert('Invalid user number');
             return;
@@ -31,7 +31,7 @@ const WhiteList = ({ provider, whtList, account }) => {
     };
 
     const displayWhiteListedUsers = async () => {
-        const count = await whtList.getWhtListTotal();
+        const count = await whtList.getCurrentWhtListCounter();
         const items = [];
 
         for (let i = 0; i < count; i++) {

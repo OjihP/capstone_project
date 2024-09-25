@@ -134,19 +134,6 @@
     "type": "event"
   },
   {
-    "inputs": [],
-    "name": "_tokenIds",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "_value",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -160,46 +147,8 @@
       }
     ],
     "name": "addToWhtList",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
+    "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "addressListed",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "artistWhiteList",
-    "outputs": [
-      {
-        "internalType": "contract ArtistWhiteList",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -270,12 +219,12 @@
   },
   {
     "inputs": [],
-    "name": "contractCall",
+    "name": "getCurrentTokenCounter",
     "outputs": [
       {
-        "internalType": "contract ArtistMarketplace",
+        "internalType": "uint256",
         "name": "",
-        "type": "address"
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -283,12 +232,12 @@
   },
   {
     "inputs": [],
-    "name": "contractCreator",
+    "name": "getCurrentWhtListCounter",
     "outputs": [
       {
-        "internalType": "address payable",
+        "internalType": "uint256",
         "name": "",
-        "type": "address"
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -330,19 +279,6 @@
         "internalType": "struct ArtistWhiteList.UserInfo",
         "name": "",
         "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getWhtListTotal",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -392,19 +328,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "listedPrice",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "components": [
@@ -429,7 +352,7 @@
             "type": "string"
           },
           {
-            "internalType": "address",
+            "internalType": "address payable",
             "name": "artistAddress",
             "type": "address"
           },
@@ -491,7 +414,7 @@
         "type": "bytes"
       }
     ],
-    "name": "mintToken",
+    "name": "mintNFT",
     "outputs": [
       {
         "internalType": "uint256",
@@ -499,6 +422,34 @@
         "type": "uint256"
       }
     ],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "restockAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "mintPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "mintTokens",
+    "outputs": [],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -619,24 +570,16 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "tokenSupply",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "refundAmount",
         "type": "uint256"
+      },
+      {
+        "internalType": "address payable",
+        "name": "recipient",
+        "type": "address"
       }
     ],
     "name": "transferRefund",
@@ -664,37 +607,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "whtList",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "userNumber",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "userAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "string",
-        "name": "nameForAddress",
-        "type": "string"
-      },
-      {
-        "internalType": "bool",
-        "name": "isListed",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
+    "stateMutability": "payable",
+    "type": "receive"
   }
 ]

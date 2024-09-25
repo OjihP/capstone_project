@@ -208,6 +208,7 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
             idToListedToken[_tokenId].currentlyListed = false;
         }
 
+        // Transfer the refund to the artist that created it
         artistMint.transferRefund(refundAmount, listedToken.artistAddress);
 
         // Burn the tokens

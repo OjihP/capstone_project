@@ -149,7 +149,7 @@ const Mint = ({ provider, artnft, account, minter }) => {
     const _nftName = name
     const _artistName = artistName
     const _artistAddress = account
-    const _ownerAddress =  await minter.contractCall()
+    const _ownerAddress =  artnft.address
     const _sellerAddress = account
     const _nftPrice = price
     const _currentlyListed = true
@@ -184,7 +184,7 @@ const Mint = ({ provider, artnft, account, minter }) => {
     try {
       const signer = provider.getSigner();
 
-      const transaction = await minter.connect(signer).mintToken(
+      const transaction = await minter.connect(signer).mintNFT(
         tokenData,
         fileData,
         ethers.utils.hexlify([]),

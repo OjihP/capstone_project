@@ -56,7 +56,7 @@ describe("Artist Contracts Test Suite", function () {
           console.error(`Error fetching user at index ${i + 1}:`, error);
         }
       }  
-      console.log(items);
+      //console.log(items);
     };
 
     displayWhiteListedUsers()
