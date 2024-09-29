@@ -6,6 +6,7 @@ describe("Artist Contracts Test Suite", function () {
   let ArtistMint, artistMint;
   let ArtistWhiteList, artistWhiteList;
   let Proposals, proposals;
+  let Events, events;
   let deployer, artist1, artist2, consumer;
   let initialPrice = ethers.utils.parseEther("0.1"); // Example price
 
@@ -32,8 +33,13 @@ describe("Artist Contracts Test Suite", function () {
     artistMint = await ArtistMint.deploy(artistMarketplace.address, artistWhiteList.address);
     await artistMint.deployed();
 
+    // Deploy Events
+    Events = await ethers.getContractFactory('Events');
+    events = await Events.deploy();
+    await events.deployed();
+
     // Set ArtistMint address in ArtistMarketplace
-    await artistMarketplace.setTokenCallAddress(artistMint.address);
+    await artistMarketplace.setContractAddresses(artistMint.address, events.address );
 
     // Initialize quorum in Proposals
     await proposals.initializeQuorum();
@@ -63,7 +69,7 @@ describe("Artist Contracts Test Suite", function () {
   });
 
   describe("mintNFT", function () {
-    it("should mint a token and create a listing", async function () {
+    it("should mint a token, create a listing, and emit an event", async function () {
       const toWei = (n) => ethers.utils.parseEther(n.toString());
       const fromWei = (n) => ethers.utils.formatEther(n);
 
@@ -94,8 +100,35 @@ describe("Artist Contracts Test Suite", function () {
       console.log("Is artist1 whitelisted before minting:", isArtist1Whitelisted);
       expect(isArtist1Whitelisted).to.be.true;
 
-      const tx = await artistMint.connect(artist1).mintNFT(tokenData, fileData, [], {value: mintPrice});
-      await tx.wait();
+      // Mint the token
+      const tx = await artistMint.connect(artist1).mintNFT(tokenData, fileData, [], { value: mintPrice });
+
+      // Wait for the transaction to be mined
+      const receipt = await tx.wait();
+
+      // Get the block timestamp
+      const block = await ethers.provider.getBlock(receipt.blockNumber);
+      console.log("Block: ", block)
+      const blockTimestamp = block.timestamp;
+      console.log("Receipt timestamp: ", blockTimestamp)
+
+      // Now perform the assertion
+      await expect(tx)
+      .to.emit(events, "TokenListedSuccess")
+      .withArgs(
+        tokenData.supplyAmount,
+        1, // Assuming tokenId 1
+        tokenData.nftName,
+        tokenData.artistName,
+        tokenData.artistAddress,
+        artistMarketplace.address,
+        tokenData.sellerAddress,
+        tokenData.nftPrice,
+        true
+        //blockTimestamp // Compare the emitted event's timestamp with the actual block timestamp
+      );
+
+      console.log(receipt.events)
 
       // Check ArtistMint contract balance
       const contractBalance = await ethers.provider.getBalance(artistMint.address);

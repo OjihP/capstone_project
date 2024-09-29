@@ -13,7 +13,6 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
   const getWhiteListedUsers = useCallback(async () => {
     setIsWhitelisted(false);
     try {
-      const signer = await provider.getSigner();
       const count = await whtList.getCurrentWhtListCounter();
       console.log(count.toString())
       const items = [];
@@ -25,8 +24,8 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
       }
       console.log(items)
 
-      const currentUserAddress = await signer.getAddress();
-      const isCurrentUserWhitelisted = items.some(user => user.userAddress === currentUserAddress);
+      const isCurrentUserWhitelisted = await whtList.isWhitelisted(account)
+
       setIsWhitelisted(isCurrentUserWhitelisted);
     } catch (error) {
       console.error('Error fetching whitelist:', error);
@@ -105,7 +104,7 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
                   <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/MyNFTs" style={{ color: 'black' }}>My NFTs</Nav.Link></Dropdown.Item>
                   <Dropdown.Item className='text-center' variant="primary" onClick={handleShow}>Listen To Events</Dropdown.Item>
                   <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Mint" style={{ color: 'black' }}>Mint</Nav.Link></Dropdown.Item>
-                  <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/WhiteList" style={{ color: 'black' }}>Whitelist Manager</Nav.Link></Dropdown.Item>
+                  {/*<Dropdown.Item className='text-center'><Nav.Link as={Link} to="/WhiteList" style={{ color: 'black' }}>Whitelist Manager</Nav.Link></Dropdown.Item>*/}
                   <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/ManageNFTs" style={{ color: 'black' }}>Manage NFTs</Nav.Link></Dropdown.Item>
                   <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Funds" style={{ color: 'black' }}>Manage Funds</Nav.Link></Dropdown.Item>
                 </>

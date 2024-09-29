@@ -227,29 +227,63 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
                         const tokenId = index + 1
                         return(
                             <Col key={index} className="overflow-hidden">
-                                <Card bg="dark" border="primary" style={{ width: "190px", height: "350px" }}>
+                                <Card bg="dark" border="primary" style={{ width: "190px", height: "350px", position: "relative" }}>
                                     <Card.Header>
-                                        <Form.Control className="text-center" plaintext readOnly style={{ color: 'white' }} defaultValue={_nftNames[index]} onClick={() => handleShow(index, tokenId)} />
+                                        <Form.Control 
+                                        className="text-center" 
+                                        plaintext 
+                                        readOnly 
+                                        style={{ color: 'white', cursor: listedState === false ? "not-allowed" : "pointer" }} 
+                                        defaultValue={_nftNames[index]} 
+                                        onClick={() => handleShow(index, tokenId)} 
+                                        disabled={listedState[index] === false}
+                                        />
                                     </Card.Header>
-                                    <Card.Img 
-                                        variant="top" 
-                                        src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`} 
-                                        height="200px"
+
+                                    <div style={{ position: "relative", height: "195px" }}>
+                                        <Card.Img
+                                        variant="top"
+                                        src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`}
+                                        height="195px"
                                         width="0px"
                                         onClick={() => handleShow(index, tokenId)}
-                                    />
-                                    {audioFilePresent[index] && (
+                                        />
+                                        {listedState[index] === false && (
+                                            <div style={{
+                                                position: "absolute",
+                                                top: "0",
+                                                left: "0",
+                                                width: "100%",
+                                                height: "100%",
+                                                display: "flex",
+                                                justifyContent: "center",
+                                                alignItems: "center",
+                                                backgroundColor: "rgba(0, 0, 0, 0.5)",  // Transparent black overlay
+                                                color: "white",
+                                                fontSize: "1.5rem",
+                                                fontWeight: "bold",
+                                                zIndex: "1",
+                                                filter: listedState == false ? "grayscale(50%)" : "none",  // Full grayscale if sold out
+                                                cursor: listedState == false ? "not-allowed" : "pointer"    // Change cursor to indicate sold out
+                                            }}>
+                                                Sold Out
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {listedState && audioFilePresent[index] && (
                                         <ReactAudioPlayer
-                                            style={{ width: "189px", height: "20px" }}
-                                            src={`https://gateway.pinata.cloud/ipfs/${uri[1]}`}
-                                            controls
-                                            controlslist="nodownload"
+                                        style={{ width: "189px", height: "20px" }}
+                                        src={`https://gateway.pinata.cloud/ipfs/${uri[1]}`}
+                                        controls
+                                        controlslist="nodownload"
                                         />
                                     )}
+
                                     <Card.Footer> 
                                         <InputGroup className="mb-3">
                                             <Button onClick={() => buyNFT(index)} style={{ width: "100px" }} variant="primary" id="button-addon1" size="sm" disabled={listedState[index] === false}>
-                                                Buy {listedPrice[index].toString()} ETH <br /> 
+                                                Buy {fromWei(listedPrice[index]).toString()} ETH <br /> 
                                                 {listedAmounts[index].toString()} Left
                                             </Button>
                                             <Form.Control onChange={(e) => setPurchaseAmount(e.target.value)} style={{ width: "10px" }} aria-label="Amount purchase" aria-descibedby="basic-addon1" disabled={listedState[index] === false}/>

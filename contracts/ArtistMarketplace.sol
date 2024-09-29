@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "./ArtistMint.sol";
+import "./Events.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -16,12 +17,13 @@ interface IERC1155Token {
     function uri(uint256 tokenId) external view returns (string memory);
 }
 
-contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, ReentrancyGuard, Ownable {
+contract ArtistMarketplace is Events, ERC721, ERC721URIStorage, ERC721Enumerable, ReentrancyGuard, Ownable {
     using Strings for uint256;
     using Counters for Counters.Counter;
 
     address payable private contractCreator;
     ArtistMint private artistMint;
+    Events private events;
     uint256 private listPrice;
 
     // Struct to hold necessary file data for NFT
@@ -49,26 +51,13 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
     mapping(uint256 => ListedToken) private idToListedToken;
     mapping(uint256 => FileData) private idToFileData;
 
-    // Event emitted when a token is successfully listed
-    event TokenListedSuccess (
-        uint256 supplyAmount,
-        uint256 indexed tokenId,
-        string nftName,
-        string artistName,
-        address artistAddress,
-        address ownerAddress,
-        address sellerAddress,
-        uint256 nftPrice,
-        bool currentlyListed,
-        uint256 timestamp
-    );
-
     constructor() ERC721("ArtistMarketplace", "ARTM") {
         contractCreator = payable(msg.sender);
     }
 
-    function setTokenCallAddress(address payable _tokenCallAddress) external onlyOwner {
-        artistMint = ArtistMint(_tokenCallAddress);
+    function setContractAddresses(address payable _artistMintAddress, address _eventsAddress) external onlyOwner {
+        artistMint = ArtistMint(_artistMintAddress);
+        events = Events(_eventsAddress);
     }
 
     function updateListPrice(uint256 _listPrice) external onlyOwner {
@@ -130,20 +119,19 @@ contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, Reentr
             _ownerAddress = payable(address(this)),
             _sellerAddress = payable(_artistAddress),
             _nftPrice,
-            _currentlyListed 
+            _currentlyListed
         );
 
-        emit TokenListedSuccess(
-            _supplyAmount,
+        events.emitEvents(
             _tokenId,
+            _supplyAmount,
             _nftName,
             _artistName,
-            _artistAddress,
-            address(this),
-            _artistAddress,
+            payable(_artistAddress),
+            _ownerAddress = payable(address(this)),
+            _sellerAddress = payable(_artistAddress),
             _nftPrice,
-            true,
-            block.timestamp
+            _currentlyListed
         );
     }
 

@@ -236,7 +236,7 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
             setFileTypes(updatedFileTypes);
             setNestIDTabs(updatedNestIDTabs);*/
 
-            await artnft.connect(signer).deleteMultipleTokens(tokenId, burnAmount);
+            await artnft.connect(signer).deleteNFTTokens(tokenId, burnAmount);
 
             loadUserNFTs();
     
@@ -267,36 +267,63 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
                         const tokenId = _tokenIdArray[index]
                         return (
                             <Col key={index} className="overflow-hidden">
-                                <Card bg="dark" border="primary" style={{ width: "190px", height: "350px" }}>
+                                <Card bg="dark" border="primary" style={{ width: "190px", height: "350px", position: "relative" }}>
                                     <Card.Header>
-                                        <Form.Control className="text-center" plaintext readOnly style={{ color: 'white' }} defaultValue={_nftNames[index]} onClick={() => handleShow(index, tokenId)} />
+                                        <Form.Control 
+                                        className="text-center" 
+                                        plaintext 
+                                        readOnly 
+                                        style={{ color: 'white' }} 
+                                        defaultValue={_nftNames[index]} 
+                                        onClick={() => handleShow(index, tokenId)} 
+                                        />
                                     </Card.Header>
-                                    <Card.Img 
-                                        variant="top" 
-                                        src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`} 
-                                        height="200px"
-                                        width="0px"
-                                        onClick={() => handleShow(index, tokenId)}
-                                    />
-                                    <Card.Footer> 
-                                        <div style={{ color: 'white', fontSize: '0.7rem' }}>
-                                            <p>
-                                                Amount: {listedAmounts[index].toString()} Left <br />
-                                                Price: {listedPrice[index].toString()} ETH
-                                                <InputGroup>
-                                                    <Button onClick={() => addNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
-                                                        Add NFT
-                                                    </Button>
-                                                    <Form.Control onChange={(e) => setMintAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to mint" aria-descibedby="basic-addon1" />
-                                                </InputGroup>
-                                                <InputGroup>
-                                                    <Button onClick={() => deleteNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
-                                                        Delete NFT
-                                                    </Button>
-                                                    <Form.Control onChange={(e) => setBurnAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to burn" aria-descibedby="basic-addon1" />
-                                                </InputGroup>
-                                            </p>
-                                        </div>
+
+                                    <div style={{ position: "relative", height: "200px" }}>
+                                        <Card.Img
+                                            variant="top"
+                                            src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`}
+                                            height="200px"
+                                            width="0px"
+                                            onClick={() => handleShow(index, tokenId)}
+                                        />
+                                        {listedState == false && (
+                                            <div style={{
+                                                position: "absolute",
+                                                top: "0",
+                                                left: "0",
+                                                width: "100%",
+                                                height: "100%",
+                                                display: "flex",
+                                                justifyContent: "center",
+                                                alignItems: "center",
+                                                backgroundColor: "rgba(0, 0, 0, 0.5)",  // Transparent black overlay
+                                                color: "white",
+                                                fontSize: "1.5rem",
+                                                fontWeight: "bold",
+                                                zIndex: "1",
+                                                filter: listedState == false ? "grayscale(50%)" : "none",  // Full grayscale if sold out
+                                                pointerEvents: "none"
+                                            }}>
+                                                Sold Out
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <Card.Footer>
+                                        <strong style={{ color: 'white '}}>Quantity: {listedAmounts[index].toString()}</strong>
+                                        <InputGroup>
+                                        <Button onClick={() => addNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
+                                            Add NFT
+                                        </Button>
+                                        <Form.Control onChange={(e) => setMintAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to mint" aria-descibedby="basic-addon1" />
+                                        </InputGroup>
+                                        <InputGroup>
+                                        <Button onClick={() => deleteNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
+                                            Delete NFT
+                                        </Button>
+                                        <Form.Control onChange={(e) => setBurnAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to burn" aria-descibedby="basic-addon1" />
+                                        </InputGroup>
                                     </Card.Footer>
                                 </Card>
                             </Col>

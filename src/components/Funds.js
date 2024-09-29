@@ -4,7 +4,7 @@ import { Button, Form, Table, Spinner } from 'react-bootstrap';
 
 const toWei = (n) => ethers.utils.parseEther(n.toString());
 
-const Funds = ({ provider, account, artnft, minter, pose }) => {
+const Funds = ({ provider, account, artnft, minter, whtList, pose }) => {
   const [balance, setBalance] = useState(0);
   const [proposals, setProposals] = useState([]);
   const [quorum, setQuorum] = useState(0);
@@ -27,9 +27,10 @@ const Funds = ({ provider, account, artnft, minter, pose }) => {
         console.log(balance);
 
         // Fetch quorum and whitelisted users total
+        await pose.connect(signer).initializeQuorum()
         const Korum = await pose.getQuorum();
         setQuorum(Korum);
-        const whtListTotal = await minter.getCurrentWhtListCounter();
+        const whtListTotal = await whtList.getCurrentWhtListCounter();
         console.log("Quorum: ", Korum.toString());
         console.log("Whitelisted Users Total: ", whtListTotal.toString());
 

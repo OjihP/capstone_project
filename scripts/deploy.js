@@ -52,10 +52,17 @@ async function main() {
   await artistMinter.deployed();
   console.log(`ArtistMinter deployed to: ${artistMinter.address}\n`);
 
+  // Deploy Events
+  const Events = await ethers.getContractFactory('Events');
+  let events = await Events.deploy();
+
+  await events.deployed();
+  console.log(`Events deployed to: ${events.address}\n`)
+
   // Set the ArtistMint address in ArtistMarketplace
   try {
-    await artistContract.setTokenCallAddress(artistMinter.address);
-    console.log("ArtistMint address set in ArtistMarketplace");
+    await artistContract.setContractAddresses(artistMinter.address, events.address);
+    console.log("ArtistMint and Events address set in ArtistMarketplace");
   } catch (error) {
     console.error("Error setting ArtistMint address in ArtistMarketplace:", error);
   }
@@ -79,7 +86,8 @@ async function main() {
     artistContract: { address: artistContract.address },
     artistWhiteList: { address: artistWhiteList.address },
     proposalsContract: { address: proposalsContract.address },
-    artistMinter: { address: artistMinter.address }
+    artistMinter: { address: artistMinter.address },
+    events: { address: events.address }
   };
 
   // Write the updated config back to the file

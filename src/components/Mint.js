@@ -9,7 +9,7 @@ const fromWei = (n) => ethers.utils.formatEther(n);
 
 const FormData = require("form-data");
 
-const Mint = ({ provider, artnft, account, minter }) => {
+const Mint = ({ provider, artnft, account, minter, onTimestamp }) => {
   const [files, setFiles] = useState([]);
   const [nestFiles, setNestFiles] = useState([]);
   const [price, setPrice] = useState('');
@@ -135,13 +135,10 @@ const Mint = ({ provider, artnft, account, minter }) => {
   const mintHandler = async () => {
     if (!files.length || !name || !artistName || !price || !mintAmount) return;
 
-    /*const isWhitelisted = await minter.isWhitelisted(account);
-    console.log(`Is whitelisted: ${isWhitelisted}`);
-
-    if (!isWhitelisted) {
-        console.error('Address is not whitelisted');
-        return;
-    }*/
+    // Convert price into wei
+    let _price = price
+    _price = toWei(price)
+    console.log(_price.toString())
 
     setIsWaiting(true);
     const _supplyAmount = mintAmount
@@ -151,7 +148,7 @@ const Mint = ({ provider, artnft, account, minter }) => {
     const _artistAddress = account
     const _ownerAddress =  artnft.address
     const _sellerAddress = account
-    const _nftPrice = price
+    const _nftPrice = _price
     const _currentlyListed = true
 
     const _fileNames = files.map(file => file.fileName)
@@ -191,6 +188,14 @@ const Mint = ({ provider, artnft, account, minter }) => {
         { value: mintPrice }
       );
       await transaction.wait();
+
+      // Get the block timestamp
+      const block = await provider.getBlock(transaction.blockNumber);
+      console.log("Block: ", block)
+      const blockTimestamp = block.timestamp;
+      console.log("Receipt timestamp: ", blockTimestamp);
+
+      onTimestamp(blockTimestamp);
 
       window.alert('NFT has been minted');
     } catch (error) {

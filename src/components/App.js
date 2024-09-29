@@ -22,6 +22,7 @@ import ARTNFT_ABI from '../abis/ArtistContract.json';
 import WHTLIST_ABI from '../abis/ArtistWhiteList.json';
 import POSE_ABI from '../abis/Proposals.json';
 import MINT_ABI from '../abis/ArtistMinter.json';
+import EVENT_ABI from '../abis/Events.json';
 
 // Config
 import config from '../config.json';
@@ -39,18 +40,22 @@ function App() {
   const [whtList, setWhtList] = useState(null);
   const [pose, setProposals] = useState(null);
   const [minter, setMinter] = useState(null);
+  const [contractEvents, setContractEvents] = useState(null);
   const [balance, setBalance] = useState(0);
   const [_fileItemArray, setFileItemArray] = useState([]);
   const [show, setShow] = useState(false);
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [latestBlock, setLatestBlock] = useState(null);
+  const [blockTimestamp, setBlockTimestamp] = useState(null);
+  const handleTimestamp = (timestamp) => {
+    setBlockTimestamp(timestamp);
+  };
 
   const handleClose = () => setShow(false);
   const handleShow = () => {
-    listenToEvent();
     setShow(true);
+    listenToEvent();
   };
 
   const navigate = useNavigate();
@@ -81,6 +86,9 @@ function App() {
       const minter = new ethers.Contract(networkConfig.artistMinter.address, MINT_ABI, provider);
       setMinter(minter);
 
+      const events = new ethers.Contract(networkConfig.events.address, EVENT_ABI, provider);
+      setContractEvents(events);
+
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       const account = ethers.utils.getAddress(accounts[0]);
       setAccount(account);
@@ -101,31 +109,60 @@ function App() {
     setWhtList(null);
     setProposals(null);
     setMinter(null);
+    setContractEvents(null);
     setAccount(null);
     setBalance(null);
   };
 
   const existingEventIds = new Set();
+  const eventDataArray = []
+
+  const eventListener = async () => {
+    if (artnft) {
+      contractEvents.on("TokenListedSuccess", (supplyAmount, tokenId, nftName, artistName, artistAddress, owner, seller, price, currentlyListed, timestamp) => {
+        const eventData = {
+          supplyAmount: supplyAmount.toString(),
+          tokenId: tokenId.toString(),
+          nftName,
+          artistName,
+          price: fromWei(price.toString()),
+          timestamp
+        };
+
+        eventDataArray.push(eventData)
+        setEvents((prevEventData) => [...prevEventData, eventData])
+        //setEvents(eventDataArray)
+
+        console.log("Current Event Data: ", eventData)
+        console.log("Event Data Array: ", eventDataArray)
+        console.log("Events Array: ", events)
+      });
+    }
+  }
 
   const startListeningToEvents = () => {
     if (artnft) {
-        artnft.on("TokenListedSuccess", (supplyAmount, tokenId, nftName, creator, CreatorAddress, owner, seller, price, fileNames, fileTypes, tokenCIDS, currentlyListed, timestamp, log) => {
-            const eventData = {
-                supplyAmount: supplyAmount.toString(),
-                tokenId: tokenId.toString(),
-                nftName,
-                creator,
-                CreatorAddress,
-                price: fromWei(price.toString()),
-                blockTimestamp: timestamp ? timestamp.toNumber() : null,
-            };
+      artnft.on("TokenListedSuccess", (supplyAmount, tokenId, nftName, creator, CreatorAddress, owner, seller, price, fileNames, fileTypes, tokenCIDS, currentlyListed, timestamp, log) => {
+        const eventData = {
+          supplyAmount: supplyAmount.toString(),
+          tokenId: tokenId.toString(),
+          nftName,
+          creator,
+          CreatorAddress,
+          price: fromWei(price.toString()),
+          blockTimestamp: timestamp ? timestamp.toNumber() : null,
+        };
 
-            if (!existingEventIds.has(log.logIndex)) {
-                existingEventIds.add(log.logIndex);
-                setEvents((prevEvents) => [...prevEvents, eventData]);
-                console.log("Most recent event: ", eventData);
-            }
-        });
+        /*console.log("Log details: ", log);
+
+        console.log("existingEventIds: ", existingEventIds)
+
+        if (!existingEventIds.has(log.logIndex)) {
+          existingEventIds.add(log.logIndex);
+          setEvents((prevEvents) => [...prevEvents, eventData]);
+          console.log("Most recent event: ", eventData);
+        }*/
+      });
     }
   };
 
@@ -133,7 +170,10 @@ function App() {
     if (artnft) {
       try {
         const latestBlock = await provider.getBlockNumber();
-        const pastEvents = await artnft.queryFilter('TokenListedSuccess', latestBlock - 100, latestBlock);
+        const pastEvents = await artnft.queryFilter('TokenListedSuccess', latestBlock, 0, latestBlock);
+
+        console.log("Lastest Block: ", latestBlock)
+        console.log("Past Events: ", pastEvents)
 
         pastEvents.forEach((log) => {
           const parsedLog = artnft.interface.parseLog(log);
@@ -153,11 +193,11 @@ function App() {
             blockTimestamp: timestamp ? timestamp.toNumber() : null,
           };
 
-          if (!existingEventIds.has(log.logIndex)) {
+          /*if (!existingEventIds.has(log.logIndex)) {
             existingEventIds.add(log.logIndex);
             setEvents((prevEvents) => [...prevEvents, eventData]);
-            console.log("Past event: ", eventData);
-          }
+            console.log("Event Data: ", eventData);
+          }*/
         });
       } catch (error) {
         console.error("Error querying or processing past events: ", error);
@@ -166,8 +206,9 @@ function App() {
   };
 
   const listenToEvent = async () => {
-    await fetchPastEvents();
-    startListeningToEvents();
+    //await fetchPastEvents();
+    //startListeningToEvents();
+    eventListener();
   };
   
   useEffect(() => {
@@ -212,14 +253,14 @@ function App() {
         <Route path="/donate" element={<Donate provider={provider} artnft={artnft} whtList={whtList} account={account} />} />
         <Route path="/nftshop" element={<NFTShop provider={provider} artnft={artnft} account={account} minter={minter} />} />
         <Route path="/myNFTs" element={<MyNFTs provider={provider} artnft={artnft} minter={minter} account={account} fileItemArray={_fileItemArray} />} />
-        <Route path="/mint" element={<Mint provider={provider} artnft={artnft} account={account} minter={minter} whtList={whtList} setFileItemArray={setFileItemArray} />} />
+        <Route path="/mint" element={<Mint provider={provider} artnft={artnft} account={account} minter={minter} whtList={whtList} setFileItemArray={setFileItemArray} onTimestamp={handleTimestamp} />} />
         <Route path="/whiteList" element={<WhiteList provider={provider} artnft={artnft} whtList={whtList} pose={pose} account={account} />} />
-        <Route path="/funds" element={<Funds provider={provider} artnft={artnft} minter={minter} pose={pose} account={account} />} />
+        <Route path="/funds" element={<Funds provider={provider} artnft={artnft} minter={minter} whtList={whtList} pose={pose} account={account} />} />
         <Route path="/manageNFTs" element={<ManageNFTs provider={provider} artnft={artnft} minter={minter} account={account} fileItemArray={_fileItemArray} />} />
         <Route path="/admin" element={<Admin provider={provider} artnft={artnft} minter={minter} whtList={whtList} pose={pose} account={account} />} />
       </Routes>
 
-      <Offcanvas show={show} onHide={handleClose} placement="end" className="custom-offcanvas">
+      <Offcanvas className="w-50" show={show} onHide={handleClose} placement="end">
         <Offcanvas.Header closeButton>
           <Offcanvas.Title>Event Listener</Offcanvas.Title>
         </Offcanvas.Header>
@@ -243,11 +284,21 @@ function App() {
               <tbody>
                 {events.map((event, index) => (
                   <tr key={index}>
-                    <td>{event.blockTimestamp ? new Date(event.blockTimestamp * 1000).toLocaleString() : 'N/A'}</td>
-                    <td>{event.tokenId}</td>
+                    <td>{new Date(event.timestamp * 1000).toLocaleString('en-US', {
+                      year: 'numeric', 
+                      month: 'numeric', 
+                      day: 'numeric', 
+                      hour: 'numeric', 
+                      minute: 'numeric', 
+                      second: 'numeric',
+                      timeZoneName: 'short', 
+                      hour12: true
+                    })} GMT{new Date(event.timestamp * 1000).getTimezoneOffset() / -60}
+                    </td>
+                    <td>{event.tokenId.toString()}</td>
                     <td>{event.nftName}</td>
-                    <td>{event.creator}</td>
-                    <td>{event.price.toString()}</td>
+                    <td>{event.artistName}</td>
+                    <td>{event.price.toString()} ETH</td>
                     <td>{event.supplyAmount.toString()}</td>
                   </tr>
                 ))}

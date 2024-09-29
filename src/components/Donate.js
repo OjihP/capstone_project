@@ -12,7 +12,6 @@ const Donate = ({ provider, account, whtList }) => {
             console.error('Provider or account is not initialized.');
             return;
         }
-        console.log("made it here")
 
         // Convert donation amount to wei
         const donationInWei = ethers.utils.parseEther(donateAmount.toString());
@@ -34,8 +33,6 @@ const Donate = ({ provider, account, whtList }) => {
             value: donationInWei,
         };
 
-        console.log("made it here")
-
         // Sign and send the transaction
         try {
             const txResponse = await signer.sendTransaction(tx);
@@ -43,8 +40,6 @@ const Donate = ({ provider, account, whtList }) => {
         } catch (error) {
             console.error('Error sending transaction:', error.message);
         }
-
-        console.log("made it here")
 
         if (donateAmount >= 0.005) {
             await whtList.connect(signer).addToWhtList(account, donationName)

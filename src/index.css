@@ -42,7 +42,8 @@ html, body, #root {
 
 
 .custom-offcanvas {
-  width: 800px; /* Adjust the width as needed */
+  padding: 1px;
+  width: 1px;
 }
 
 code {

@@ -127,7 +127,7 @@
         "type": "string"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "string",
         "name": "artistName",
         "type": "string"
@@ -161,12 +161,6 @@
         "internalType": "bool",
         "name": "currentlyListed",
         "type": "bool"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
       }
     ],
     "name": "TokenListedSuccess",
@@ -334,6 +328,59 @@
       }
     ],
     "name": "deleteNFTTokens",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_supplyAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "_nftName",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_artistName",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "_artistAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address payable",
+        "name": "_ownerAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address payable",
+        "name": "_sellerAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_nftPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "_currentlyListed",
+        "type": "bool"
+      }
+    ],
+    "name": "emitEvents",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -758,11 +805,16 @@
     "inputs": [
       {
         "internalType": "address payable",
-        "name": "_tokenCallAddress",
+        "name": "_artistMintAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_eventsAddress",
         "type": "address"
       }
     ],
-    "name": "setTokenCallAddress",
+    "name": "setContractAddresses",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
