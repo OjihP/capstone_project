@@ -4,10 +4,12 @@ import { Row, Col, Card, Form, Modal, Tabs, Tab, ListGroup, Button, InputGroup }
 import ReactAudioPlayer from 'react-audio-player'
 import ReactPlayer from 'react-player';
 
+import config from '../config.json';
+
 const toWei = (n) => ethers.utils.parseEther(n.toString())
 const fromWei = (n) => ethers.utils.formatEther(n)
 
-const ManageNFTs = ({ provider, artnft, minter, account }) => {
+const ManageNFTs = ({ provider, artnft, listings, minter, account }) => {
     const [_nftNames, setTokenNames] = useState([])
     const [listedCIDs, setTokenCIDs] = useState([])
     const [listedPrice, setListedPrice] = useState([])
@@ -22,7 +24,8 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
     const [_fileDataIdArray, setFileDataIdArray] = useState([])
     const [burnAmount, setBurnAmount] = useState(0)
     const [mintAmount, setMintAmount] = useState('');
-    //const [timeStamp, setTokenTimeStamp] = useState(0)
+    const [NFTsListed, setListedNFTs] = useState(true);
+    const [nftSupply, setNFTSupply] = useState([]);
 
     const handleClose = () => setShow(false);
 
@@ -32,23 +35,28 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
     };
 
     const loadUserNFTs = async () => {
+        const network = await provider.getNetwork();
+        const chainId = network.chainId;
+        const networkConfig = config[chainId];
+
         try {
             const signer = await provider.getSigner();
             const count = await minter.getCurrentTokenCounter();
-            const mintContractBalance = await provider.getBalance('0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9');
-            console.log("Mint Contract Balance", mintContractBalance.toString())
             const tokenIdArray = [];
             const fileDataIdArray = [];
+            const tokenBalances = [];
 
             // Retrieve token IDs
             for (let i = 0; i < count; i++) {
                 try {
-                    const tokenInfo = await artnft.getListedFromTokenId(i + 1);
+                    const tokenInfo = await listings.getListedFromTokenId(i + 1);
+                    const tokenBalance = await minter.balanceOf(networkConfig.artistContract.address, i + 1);
 
                     // Check if the creatorAddress matches the account
                     if (tokenInfo.artistAddress.toLowerCase() === account.toLowerCase()) {
                         tokenIdArray.push(tokenInfo.tokenId);
                         fileDataIdArray.push(tokenInfo.tokenId);
+                        tokenBalances.push(tokenBalance);
                         setTokenIdArray(tokenIdArray)
                         setFileDataIdArray(fileDataIdArray)
                         console.log(`Token ID ${i + 1}:`, tokenInfo.tokenId.toString());
@@ -58,15 +66,25 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
                 }
             }
 
+            // Check if all arrays are empty
+            if (
+                tokenIdArray.length === 0 && fileDataIdArray.length === 0) {
+                setListedNFTs(false);
+            } else {
+                setListedNFTs(true);
+            }
+
+            console.log("Listed NFTs?: ", NFTsListed)
+
             // Helper function to get token details
             const getTokenDetails = async (tokenId) => {
-                const tokenDetails = await artnft.connect(signer).getListedFromTokenId(tokenId);
+                const tokenDetails = await listings.connect(signer).getListedFromTokenId(tokenId);
                 return tokenDetails;
             };
 
             // Helper function to get token details
             const getTokenFileDetails = async (tokenId) => {
-                const tokenFileDetails = await artnft.connect(signer).getFileDataFromTokenId(tokenId);
+                const tokenFileDetails = await listings.connect(signer).getFileDataFromTokenId(tokenId);
                 return tokenFileDetails;
             };
 
@@ -126,6 +144,7 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
             setListedState(listedTokens);
             setNestIDTabs(tabsData)
             setNestIDs(nestIDs);
+            setNFTSupply(tokenBalances)
             console.log(listedCIDs)
 
         } catch (error) {
@@ -182,14 +201,18 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
         try {
             const signer = await provider.getSigner();
             const tokenId = _tokenIdArray[index]
-            console.log(tokenId)
-            console.log(await artnft.getListedFromTokenId(tokenId))
+            const listPrice = await artnft.getListPrice();
+            const mintPrice = listPrice.mul(mintAmount); 
 
-            await artnft.connect(signer).replenishNFTTokens(tokenId, mintAmount, ethers.utils.hexlify([]));
+            console.log(tokenId.toString())
+            console.log(await listings.getListedFromTokenId(tokenId))
+
+            await artnft.connect(signer).replenishNFTTokens(tokenId, mintAmount, ethers.utils.hexlify([]), { value: mintPrice });
 
             loadUserNFTs();
     
             console.log(`Replenished NFT Tokens at index: ${tokenId}`);
+            window.alert(`Replenished NFT Tokens at index: ${tokenId}`);
         } catch (error) {
             console.error("Error adding NFT Tokens:", error);
         }
@@ -200,61 +223,22 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
             const signer = await provider.getSigner();
             const tokenId = _tokenIdArray[index]
             console.log(tokenId)
-            console.log(await artnft.getListedFromTokenId(tokenId))
+            console.log(await listings.getListedFromTokenId(tokenId))
 
-            /*// Remove the selected NFT from the tokenIdArray and fileDataIdArray
-            const updatedTokenIdArray = [..._tokenIdArray];
-            const updatedFileDataIdArray = [..._fileDataIdArray];
-    
-            // Remove the NFT at the specified index
-            updatedTokenIdArray.splice(tokenId, 1);
-            updatedFileDataIdArray.splice(tokenId, 1);
-    
-            // Update the state variables
-            setTokenIdArray(updatedTokenIdArray);
-            setFileDataIdArray(updatedFileDataIdArray);
-    
-            // Optional: Remove associated data from other state variables (e.g., names, CIDs)
-            const updatedNames = [..._nftNames];
-            const updatedCIDs = [...listedCIDs];
-            const updatedPrices = [...listedPrice];
-            const updatedAmounts = [...listedAmounts];
-            const updatedFileTypes = [..._fileTypes];
-            const updatedNestIDTabs = { ...nestIDTabs };
-    
-            updatedNames.splice(tokenId, 1);
-            updatedCIDs.splice(tokenId, 1);
-            updatedPrices.splice(tokenId, 1);
-            updatedAmounts.splice(tokenId, 1);
-            updatedFileTypes.splice(tokenId, 1);
-            delete updatedNestIDTabs[_tokenIdArray[tokenId]]; // Assuming nestIDTabs is keyed by tokenId
-    
-            setTokenNames(updatedNames);
-            setTokenCIDs(updatedCIDs);
-            setListedPrice(updatedPrices);
-            setMintAmounts(updatedAmounts);
-            setFileTypes(updatedFileTypes);
-            setNestIDTabs(updatedNestIDTabs);*/
-
-            await artnft.connect(signer).deleteNFTTokens(tokenId, burnAmount);
+            await artnft.connect(signer).deleteNFTTokens(tokenId, burnAmount, account);
 
             loadUserNFTs();
     
             console.log(`Deleted NFT at index: ${tokenId}`);
+            window.alert(`Deleted NFT tokens at index: ${tokenId}`);
         } catch (error) {
             console.error("Error deleting NFT:", error);
         }
     };
-    
-    const changeNFT = async () => {
-
-    }
 
     useEffect(() => {
-        if (account) {
-            loadUserNFTs();
-        }
-    }, [account]);
+        loadUserNFTs();
+    }, [account, NFTsListed]);
 
     return (
         <div className='padding-fromNav text-center'>
@@ -262,74 +246,78 @@ const ManageNFTs = ({ provider, artnft, minter, account }) => {
                 <h1>Listed NFTs</h1>
             </header>
             <div className="px-5 py-3 container">
-                <Row xs={1} md={2} lg={4} className="g-4 py-3">
-                    {listedCIDs.map((uri, index) => {
-                        const tokenId = _tokenIdArray[index]
-                        return (
-                            <Col key={index} className="overflow-hidden">
-                                <Card bg="dark" border="primary" style={{ width: "190px", height: "350px", position: "relative" }}>
-                                    <Card.Header>
-                                        <Form.Control 
-                                        className="text-center" 
-                                        plaintext 
-                                        readOnly 
-                                        style={{ color: 'white' }} 
-                                        defaultValue={_nftNames[index]} 
-                                        onClick={() => handleShow(index, tokenId)} 
-                                        />
-                                    </Card.Header>
+                {!NFTsListed ? (
+                    <p>No NFTs minted</p>
+                ) : (
+                    <Row xs={1} md={2} lg={4} className="g-4 py-3">
+                        {listedCIDs.map((uri, index) => {
+                            const tokenId = _tokenIdArray[index]
+                            return (
+                                <Col key={index} className="overflow-hidden">
+                                    <Card bg="dark" border="primary" style={{ width: "190px", height: "350px", position: "relative" }}>
+                                        <Card.Header>
+                                            <Form.Control 
+                                            className="text-center" 
+                                            plaintext 
+                                            readOnly 
+                                            style={{ color: 'white' }} 
+                                            defaultValue={_nftNames[index]} 
+                                            onClick={() => handleShow(index, tokenId)} 
+                                            />
+                                        </Card.Header>
 
-                                    <div style={{ position: "relative", height: "200px" }}>
-                                        <Card.Img
-                                            variant="top"
-                                            src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`}
-                                            height="200px"
-                                            width="0px"
-                                            onClick={() => handleShow(index, tokenId)}
-                                        />
-                                        {listedState == false && (
-                                            <div style={{
-                                                position: "absolute",
-                                                top: "0",
-                                                left: "0",
-                                                width: "100%",
-                                                height: "100%",
-                                                display: "flex",
-                                                justifyContent: "center",
-                                                alignItems: "center",
-                                                backgroundColor: "rgba(0, 0, 0, 0.5)",  // Transparent black overlay
-                                                color: "white",
-                                                fontSize: "1.5rem",
-                                                fontWeight: "bold",
-                                                zIndex: "1",
-                                                filter: listedState == false ? "grayscale(50%)" : "none",  // Full grayscale if sold out
-                                                pointerEvents: "none"
-                                            }}>
-                                                Sold Out
-                                            </div>
-                                        )}
-                                    </div>
+                                        <div style={{ position: "relative", height: "200px" }}>
+                                            <Card.Img
+                                                variant="top"
+                                                src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`}
+                                                height="200px"
+                                                width="0px"
+                                                onClick={() => handleShow(index, tokenId)}
+                                            />
+                                            {listedState === false && (
+                                                <div style={{
+                                                    position: "absolute",
+                                                    top: "0",
+                                                    left: "0",
+                                                    width: "100%",
+                                                    height: "100%",
+                                                    display: "flex",
+                                                    justifyContent: "center",
+                                                    alignItems: "center",
+                                                    backgroundColor: "rgba(0, 0, 0, 0.5)",  // Transparent black overlay
+                                                    color: "white",
+                                                    fontSize: "1.5rem",
+                                                    fontWeight: "bold",
+                                                    zIndex: "1",
+                                                    filter: listedState === false ? "grayscale(50%)" : "none",  // Full grayscale if sold out
+                                                    pointerEvents: "none"
+                                                }}>
+                                                    Sold Out
+                                                </div>
+                                            )}
+                                        </div>
 
-                                    <Card.Footer>
-                                        <strong style={{ color: 'white '}}>Quantity: {listedAmounts[index].toString()}</strong>
-                                        <InputGroup>
-                                        <Button onClick={() => addNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
-                                            Add NFT
-                                        </Button>
-                                        <Form.Control onChange={(e) => setMintAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to mint" aria-descibedby="basic-addon1" />
-                                        </InputGroup>
-                                        <InputGroup>
-                                        <Button onClick={() => deleteNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
-                                            Delete NFT
-                                        </Button>
-                                        <Form.Control onChange={(e) => setBurnAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to burn" aria-descibedby="basic-addon1" />
-                                        </InputGroup>
-                                    </Card.Footer>
-                                </Card>
-                            </Col>
-                        )
-                    })}
-                </Row>
+                                        <Card.Footer>
+                                            <strong style={{ color: 'white '}}>Quantity: {nftSupply[index].toString()}</strong>
+                                            <InputGroup>
+                                            <Button onClick={() => addNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
+                                                Add NFT
+                                            </Button>
+                                            <Form.Control onChange={(e) => setMintAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to mint" aria-descibedby="basic-addon1" />
+                                            </InputGroup>
+                                            <InputGroup>
+                                            <Button onClick={() => deleteNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
+                                                Delete NFT
+                                            </Button>
+                                            <Form.Control onChange={(e) => setBurnAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to burn" aria-descibedby="basic-addon1" />
+                                            </InputGroup>
+                                        </Card.Footer>
+                                    </Card>
+                                </Col>
+                            )
+                        })}
+                    </Row>
+                )}
             </div>
 
             <Modal show={show} onHide={handleClose} centered>

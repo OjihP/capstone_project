@@ -2,6 +2,8 @@ import { ethers } from 'ethers';
 import { useState, useEffect } from 'react';
 import { Button, Form, Table, Spinner } from 'react-bootstrap';
 
+import config from '../config.json';
+
 const toWei = (n) => ethers.utils.parseEther(n.toString());
 
 const Funds = ({ provider, account, artnft, minter, whtList, pose }) => {
@@ -15,24 +17,44 @@ const Funds = ({ provider, account, artnft, minter, whtList, pose }) => {
   const [isWaiting, setIsWaiting] = useState(false);
   const [error, setError] = useState('');
   const [userVotes, setUserVotes] = useState({});
+  const [listTotal, setListTotal] = useState(0);
+  const [whiteListTotal, setWhtListedTotal] = useState(0);
   const [finalizedProposals, setFinalizedProposals] = useState(new Set()); // Track finalized proposals
 
     const fundsAndProposals = async () => {
+        const network = await provider.getNetwork();
+        const chainId = network.chainId;
+        const networkConfig = config[chainId];
+
         const signer = await provider.getSigner();
 
         // Fetch contract balance
-        let balance = await provider.getBalance('0x5fbdb2315678afecb367f032d93f642f64180aa3');
+        let balance = await provider.getBalance(networkConfig.artistContract.address);
         balance = ethers.utils.formatUnits(balance, 18);
         setBalance(balance);
         console.log(balance);
 
-        // Fetch quorum and whitelisted users total
-        await pose.connect(signer).initializeQuorum()
+        // Fetch quorum and whitelisted user total
+        const whtListTotal = await whtList.getCurrentWhtListCounter();
+        const UsersWhtListed = [];
+        
+        for (var i = 0; i < whtListTotal; i++) {
+            const userInfo = await whtList.getUserByNumber(i + 1);
+            const whtListedBool = await whtList.isWhitelisted(userInfo.userAddress);
+
+            if (whtListedBool == true) {
+                UsersWhtListed.push(userInfo.userNumber);
+            }
+        }
+
         const Korum = await pose.getQuorum();
         setQuorum(Korum);
-        const whtListTotal = await whtList.getCurrentWhtListCounter();
+        setListTotal(whtListTotal.toString());
+        setWhtListedTotal(UsersWhtListed.length);
+        
         console.log("Quorum: ", Korum.toString());
         console.log("Whitelisted Users Total: ", whtListTotal.toString());
+        console.log("Total White Listed Users: ", UsersWhtListed.length);
 
         // Fetch proposals count
         const count = await pose.connect(signer).getProposalCount();
@@ -126,6 +148,8 @@ const Funds = ({ provider, account, artnft, minter, whtList, pose }) => {
         <div className="padding-fromNav text-center">
             <p><strong>Contract Funds</strong></p>
             <p>Contract Balance: {balance} ETH</p>
+            <p>Total Users Listed: {listTotal}</p>
+            <p>Total White Listed Users: {whiteListTotal}</p>
             <div>
                 <p><strong>Proposal a Withdrawal</strong></p>
                 <Form onSubmit={proposalHandler}>

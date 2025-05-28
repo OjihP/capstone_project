@@ -1,77 +1,107 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.9;
 
+import "./NFTListing.sol";
 import "./ArtistMarketplace.sol";
 import "./ArtistWhiteList.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArtistMint is ERC1155, ArtistWhiteList, ReentrancyGuard {
+contract ArtistMint is ERC1155, ReentrancyGuard, Ownable {
     using Counters for Counters.Counter;
 
     Counters.Counter private tokenCounter;
+    NFTListing private nftListing;
     ArtistMarketplace private artistMarketplace;
-    ArtistWhiteList private artistWhiteList;
+    ArtistWhiteList private whiteList;
     uint256 private listedPrice;
+    address private contractCreator;
+
+    struct MintParams {
+        NFTListing.ListedToken tokenData;
+        NFTListing.FileData fileData;
+    }
 
     // Mapping to track pending refunds
     mapping(address => uint256) private pendingRefunds;
 
-    constructor(address payable marketplaceAddress, address whiteListAddress) ERC1155("") {
+    constructor(address _whtListAddress, address nftListingAddress, address payable marketplaceAddress) ERC1155("") {
+        nftListing = NFTListing(nftListingAddress);
         artistMarketplace = ArtistMarketplace(marketplaceAddress);
-        artistWhiteList = ArtistWhiteList(whiteListAddress);
+        whiteList = ArtistWhiteList(_whtListAddress);
+        contractCreator = artistMarketplace.getCreatorAddress();
+    }
+
+    modifier onlyWhtListed(address caller) {
+        bool chkWhtList = whiteList.isWhitelisted(caller);
+        require(chkWhtList == true, "Unauthorized User(MINT)");
+        _;
+    }
+
+    modifier authorizedPersonnel(address caller) {
+        require(caller == contractCreator || whiteList.isWhitelisted(caller) == true, "Unauthorized User(MINT1)");
+        _;
     }
 
     function getCurrentTokenCounter() external view returns (uint256) {
         return tokenCounter.current();
     }
 
-    function mintNFT(
-        ArtistMarketplace.ListedToken memory tokenData,
-        ArtistMarketplace.FileData memory fileData, 
-        bytes memory data 
-    ) external payable onlyWhtListed nonReentrant returns (uint) {
-        require(tokenData.supplyAmount > 0, "Mint at least 1 token");
+    function incrementTokenCounter() public {
+        tokenCounter.increment();
+    }
+
+    function decrementTokenCounter() public {
+        tokenCounter.decrement();
+    }
+
+    function getMarketTokenBalance(uint256 _tokenId) external view returns (uint256) {
+        return balanceOf(address(artistMarketplace), _tokenId);
+    }
+
+    function mintNFT(MintParams memory params, address caller) external payable nonReentrant onlyWhtListed (caller) returns (uint) {
+        require(params.tokenData.supplyAmount > 0, "Mint at least 1 token");
 
         listedPrice = artistMarketplace.getListPrice();
-        require(msg.value >= listedPrice * tokenData.supplyAmount, "Invalid cost");
+        require(msg.value >= listedPrice * params.tokenData.supplyAmount, "Invalid cost");
 
         // Mint the token
         tokenCounter.increment();
         uint256 newTokenId = tokenCounter.current();
-        _mint(msg.sender, newTokenId, tokenData.supplyAmount, data);
+        _mint(msg.sender, newTokenId, params.tokenData.supplyAmount, "");
 
         // Approve and transfer tokens to the marketplace
         setApprovalForAll(address(artistMarketplace), true);
-        safeTransferFrom(msg.sender, address(artistMarketplace), newTokenId, tokenData.supplyAmount, data);
+        safeTransferFrom(msg.sender, address(artistMarketplace), newTokenId, params.tokenData.supplyAmount, "");
 
         // List token and file data in the marketplace
-        artistMarketplace.createListedToken(
+        nftListing.createListedToken(
             newTokenId, 
-            tokenData.supplyAmount, 
-            tokenData.nftName, 
-            tokenData.artistName, 
-            payable(tokenData.artistAddress),
+            balanceOf(address(artistMarketplace), newTokenId), 
+            params.tokenData.nftName, 
+            params.tokenData.artistName, 
+            payable(params.tokenData.artistAddress),
             payable(address(artistMarketplace)), 
-            payable(tokenData.artistAddress), 
-            tokenData.nftPrice, 
+            payable(params.tokenData.artistAddress), 
+            params.tokenData.nftPrice, 
             true
         );
 
-        artistMarketplace.createListedFileData(
+        nftListing.createListedFileData(
             newTokenId, 
-            fileData.fileNames, 
-            fileData.fileTypes, 
-            fileData.tokenCIDs, 
-            fileData.nestIDs
+            params.fileData.fileNames, 
+            params.fileData.fileTypes, 
+            params.fileData.tokenCIDs, 
+            params.fileData.nestIDs
         );
 
         return newTokenId;
     }
 
     // Mint tokens for NFTs already created
-    function mintTokens(uint256 tokenId, uint256 restockAmount, uint256 mintPrice, bytes memory data) external payable onlyWhtListed {
+    function mintTokens(uint256 tokenId, uint256 restockAmount, uint256 mintPrice, bytes memory data, address caller) external payable onlyWhtListed (caller) {
         require(msg.value >= mintPrice, "Invalid cost");
 
         // Mint the tokens for the specified amount
@@ -86,12 +116,12 @@ contract ArtistMint is ERC1155, ArtistWhiteList, ReentrancyGuard {
         safeTransferFrom(msg.sender, address(artistMarketplace), tokenId, restockAmount, data);
     }
 
-    function burnTokens(uint256 tokenId, uint256 amount) external onlyWhtListed {
+    function burnTokens(uint256 tokenId, uint256 amount, address caller) external authorizedPersonnel (caller) {
         require(balanceOf(address(artistMarketplace), tokenId) >= amount, "Insufficient balance to burn");
         _burn(address(artistMarketplace), tokenId, amount);
     }
 
-    function transferRefund(uint refundAmount, address payable recipient) external nonReentrant {
+    function transferRefund(uint refundAmount, address payable recipient, address caller) external nonReentrant authorizedPersonnel (caller) {
         // Ensure the contract has enough balance to refund
         require(address(this).balance >= refundAmount, "Insufficient balance in ArtistMint");
 

@@ -12,6 +12,11 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
 
   const getWhiteListedUsers = useCallback(async () => {
     setIsWhitelisted(false);
+
+    if (!whtList || !account) {
+      return;
+    }
+
     try {
       const count = await whtList.getCurrentWhtListCounter();
       console.log(count.toString())
@@ -19,14 +24,16 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
 
       for (let i = 0; i < count; i++) {
         const userInfo = await whtList.getUserByNumber(i + 1);
-        console.log(userInfo)
+        console.log(userInfo)     
         items.push(userInfo);
       }
       console.log(items)
 
       const isCurrentUserWhitelisted = await whtList.isWhitelisted(account)
+      console.log("CurrentUserWhtListed: ", isCurrentUserWhitelisted)
 
       setIsWhitelisted(isCurrentUserWhitelisted);
+
     } catch (error) {
       console.error('Error fetching whitelist:', error);
     }
@@ -46,7 +53,7 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
     } catch (error) {
       console.error('Error fetching Admin:', error);
     }
-  }, [provider, artnft]);
+  }, [provider, account]);
 
   const handleScroll = useCallback(() => {
     const offset = window.scrollY;
@@ -59,11 +66,10 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
   }, [handleScroll]);
 
   useEffect(() => {
-    if (account) {
-      getWhiteListedUsers();
-      getAdmin();
-    }
-  }, [account, getWhiteListedUsers, getAdmin]);
+    console.log(isWhitelisted)
+    getWhiteListedUsers();
+    getAdmin();
+  }, [account, whtList]);
 
   return (
     <Navbar expand="lg" bg={isScrolled ? 'dark' : 'dark'} variant="dark" fixed="top">
@@ -104,9 +110,9 @@ const Navigation = ({ web3Handler, disconnectFromWeb3, provider, account, handle
                   <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/MyNFTs" style={{ color: 'black' }}>My NFTs</Nav.Link></Dropdown.Item>
                   <Dropdown.Item className='text-center' variant="primary" onClick={handleShow}>Listen To Events</Dropdown.Item>
                   <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Mint" style={{ color: 'black' }}>Mint</Nav.Link></Dropdown.Item>
-                  {/*<Dropdown.Item className='text-center'><Nav.Link as={Link} to="/WhiteList" style={{ color: 'black' }}>Whitelist Manager</Nav.Link></Dropdown.Item>*/}
+                  {<Dropdown.Item className='text-center'><Nav.Link as={Link} to="/WhiteList" style={{ color: 'black' }}>Whitelist Manager</Nav.Link></Dropdown.Item>}
                   <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/ManageNFTs" style={{ color: 'black' }}>Manage NFTs</Nav.Link></Dropdown.Item>
-                  <Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Funds" style={{ color: 'black' }}>Manage Funds</Nav.Link></Dropdown.Item>
+                  {<Dropdown.Item className='text-center'><Nav.Link as={Link} to="/Funds" style={{ color: 'black' }}>Manage Funds</Nav.Link></Dropdown.Item>}
                 </>
               )}
               {account && isAdmin && (

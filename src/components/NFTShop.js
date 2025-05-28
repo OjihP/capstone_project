@@ -4,11 +4,14 @@ import { Row, Col, Card, Form, Modal, Tabs, Tab, ListGroup, InputGroup, Button }
 import ReactAudioPlayer from 'react-audio-player'
 import ReactPlayer from 'react-player';
 
+import config from '../config.json';
+
 const toWei = (n) => ethers.utils.parseEther(n.toString())
 const fromWei = (n) => ethers.utils.formatEther(n)
 
-const NFTShop = ({ provider, artnft, account, minter }) => {
+const NFTShop = ({ provider, artnft, listings, account, minter }) => {
    const [_nftNames, setTokenNames] = useState([])
+   const [_artistNames, setArtistNames] = useState([])
    const [listedCIDs, setTokenCIDs] = useState([])
    const [listedPrice, setListedPrice] = useState([])
    const [_fileTypes, setFileTypes] = useState([])
@@ -20,6 +23,8 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
    const [show, setShow] = useState(false);
    const [selectedNFT, setSelectedNFT] = useState(null);
    const [nestIDTabs, setNestIDTabs] = useState({});
+   const [nftSupply, setNFTSupply] = useState([]);
+   const [refresh, setRefresh] = useState(false);
 
    const handleClose = () => setShow(false);
 
@@ -29,27 +34,26 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
     };
 
     const loadAllNFTs = async () => {
+        const network = await provider.getNetwork();
+        const chainId = network.chainId;
+        const networkConfig = config[chainId];
+
         try {
-            const signer = await provider.getSigner();
             const count = await minter.getCurrentTokenCounter();
             const tokenIdArray = [];
             const fileDataIdArray = [];
+            const tokenBalances = [];
 
             console.log("Total tokens count:", count.toString());
-
-    
-            // Retrieve token IDs
-            /*for (let i = 0; i < count; i++) {
-                const userInfo = await artnft.connect(signer).idToListedToken(i + 1);
-                items.push(userInfo.tokenId);
-            }*/
 
             // Retrieve token IDs
             for (let i = 0; i < count; i++) {
                 try {
-                    const tokenInfo = await artnft.getListedFromTokenId(i + 1); // Ensure idToListedToken is defined in the contract
+                    const tokenInfo = await listings.getListedFromTokenId(i + 1);
+                    const tokenBalance = await minter.balanceOf(networkConfig.artistContract.address, i + 1); 
                     tokenIdArray.push(tokenInfo.tokenId);
                     fileDataIdArray.push(tokenInfo.tokenId);
+                    tokenBalances.push(tokenBalance);
                     console.log(`Token ID ${i + 1}:`, tokenInfo.tokenId.toString());
                 } catch (innerError) {
                     console.error(`Error retrieving token info for token ID ${i + 1}:`, innerError);
@@ -58,13 +62,15 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
     
             // Helper function to get token details
             const getTokenDetails = async (tokenId) => {
-                const tokenDetails = await artnft.connect(signer).getListedFromTokenId(tokenId);
+                const tokenDetails = await listings.getListedFromTokenId(tokenId);
+                console.log("'tokenDetails' variable: ", tokenDetails)
                 return tokenDetails;
             };
 
             // Helper function to get token details
             const getTokenFileDetails = async (tokenId) => {
-                const tokenFileDetails = await artnft.connect(signer).getFileDataFromTokenId(tokenId);
+                const tokenFileDetails = await listings.getFileDataFromTokenId(tokenId);
+                console.log("'tokenFileDetails' variable: ", tokenFileDetails)
                 return tokenFileDetails;
             };
     
@@ -77,6 +83,7 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
     
             // Extract specific details
             const tokenNames = tokenDetails.map(details => details.nftName);
+            const artistNames = tokenDetails.map(details => details.artistName);
             const tokenPrices = tokenDetails.map(details => details.nftPrice.toString());
             const tokenAmounts = tokenDetails.map(details => details.supplyAmount);
             const listedTokens = tokenDetails.map(details => details.currentlyListed);
@@ -118,15 +125,16 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
                         fileType: fileTypes[tokenIndex][fileIndex],
                     });
                 });
-                console.log(acc)
+                console.log("'acc' variable: ", acc)
                 return acc;
             }, {});
 
-            console.log(nestIDTabs)
-            console.log(tabsData)
+            console.log("'nestIDTabs' variable: ", nestIDTabs)
+            console.log("'tabsData' variable: ", tabsData)
 
             // Update the state
             setTokenNames(tokenNames);
+            setArtistNames(artistNames)
             setTokenCIDs(tokenCIDs);
             setListedPrice(tokenPrices);
             setFileTypes(fileTypes);
@@ -134,6 +142,7 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
             setListedState(listedTokens);
             setNestIDTabs(tabsData)
             setNestIDs(nestIDs);
+            setNFTSupply(tokenBalances);
     
             // Additional processing
             const audioPresentList = fileTypes.map(types => {
@@ -142,7 +151,8 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
             setAudioFilePresent(audioPresentList);
     
         } catch (error) {
-            console.log('Error', error);
+            console.log("Error loading NFTs: ", error);
+            window.alert("Error loading NFTs!")
         }
     };
 
@@ -192,35 +202,46 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
     };
     
     const buyNFT = async (index) => {
+        if (!account) {
+            window.alert('Please connect wallet to purchase NFTs')
+            return;
+        }
+
         try {
             const tokenId = index + 1
             console.log('TokenId: ', tokenId)
             console.log('Price by Index: ', listedPrice[index])
             const signer = await provider.getSigner()
             const totalAmount = ethers.BigNumber.from(listedPrice[index]).mul(ethers.BigNumber.from(purchaseAmount));
-            console.log(purchaseAmount)
+            console.log("'purchaseAmount' variable: ", purchaseAmount)
             console.log('Total Price: ', totalAmount.toString())
-            await artnft.connect(signer).executeSale(tokenId, purchaseAmount, { value: toWei(totalAmount) })
-            const sale = await artnft.getListedFromTokenId(tokenId)
-            console.log('Creator of NFT: ', sale.creator)
-            console.log('Owner of NFT: ', sale.owner)
-            console.log('Seller of NFT: ', sale.seller)
+            await artnft.connect(signer).executeSale(tokenId, purchaseAmount, { value: totalAmount })
+
+            window.alert("Your NFT(s) have been purchased!")
+
+            // Toggle the refresh state to force re-render
+            setRefresh(true);
+
+            if (refresh == true) {
+                loadAllNFTs();
+            } 
+            
+            console.log('Refresh State: ', refresh)
+
         } catch (error) {
-            console.log('Error', error)
+            console.log('Error purchasing NFT: ', error)
+            window.alert('Error purchasing NFT')
+            return;
         }
-
-        window.alert('NFT(s) has been purchased')
-
-        loadAllNFTs()
     }
 
     useEffect(() => {
-        loadAllNFTs()
-    }, [artnft]);
+        loadAllNFTs();
+    }, [artnft, listings, refresh]);
 
     return (
         <div className='padding-fromNav text-center'>
-            <p><strong>NFT Shop</strong></p>
+            <p><strong>NFT Shop{console.log(nftSupply.toString())}</strong></p>
             <div className="px-5 py-3 container">
                 <Row xs={1} md={2} lg={4} className="g-4 py-3">
                     {listedCIDs.map((uri, index) => {
@@ -230,25 +251,26 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
                                 <Card bg="dark" border="primary" style={{ width: "190px", height: "350px", position: "relative" }}>
                                     <Card.Header>
                                         <Form.Control 
-                                        className="text-center" 
-                                        plaintext 
-                                        readOnly 
-                                        style={{ color: 'white', cursor: listedState === false ? "not-allowed" : "pointer" }} 
-                                        defaultValue={_nftNames[index]} 
-                                        onClick={() => handleShow(index, tokenId)} 
-                                        disabled={listedState[index] === false}
+                                            className="text-center" 
+                                            plaintext 
+                                            readOnly 
+                                            style={{ color: 'white', cursor: nftSupply[index] == 0 ? "not-allowed" : "pointer" }} 
+                                            defaultValue={_nftNames[index]} 
+                                            onClick={() => handleShow(index, tokenId)} 
+                                            disabled={nftSupply[index] == 0}
                                         />
+                                        <small style={{ color: 'white', fontSize: '0.6rem' }} >{_artistNames[index]}</small>
                                     </Card.Header>
 
                                     <div style={{ position: "relative", height: "195px" }}>
                                         <Card.Img
-                                        variant="top"
-                                        src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`}
-                                        height="195px"
-                                        width="0px"
-                                        onClick={() => handleShow(index, tokenId)}
+                                            variant="top"
+                                            src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`}
+                                            height="195px"
+                                            width="0px"
+                                            onClick={() => handleShow(index, tokenId)}
                                         />
-                                        {listedState[index] === false && (
+                                        {nftSupply[index] == 0 && (
                                             <div style={{
                                                 position: "absolute",
                                                 top: "0",
@@ -263,30 +285,30 @@ const NFTShop = ({ provider, artnft, account, minter }) => {
                                                 fontSize: "1.5rem",
                                                 fontWeight: "bold",
                                                 zIndex: "1",
-                                                filter: listedState == false ? "grayscale(50%)" : "none",  // Full grayscale if sold out
-                                                cursor: listedState == false ? "not-allowed" : "pointer"    // Change cursor to indicate sold out
+                                                filter: nftSupply[index] == 0 ? "grayscale(50%)" : "none",  // Full grayscale if sold out
+                                                cursor: nftSupply[index] == 0 ? "not-allowed" : "pointer"    // Change cursor to indicate sold out
                                             }}>
                                                 Sold Out
                                             </div>
                                         )}
                                     </div>
 
-                                    {listedState && audioFilePresent[index] && (
+                                    {nftSupply[index] && audioFilePresent[index] && (
                                         <ReactAudioPlayer
-                                        style={{ width: "189px", height: "20px" }}
-                                        src={`https://gateway.pinata.cloud/ipfs/${uri[1]}`}
-                                        controls
-                                        controlslist="nodownload"
+                                            style={{ width: "189px", height: "20px" }}
+                                            src={`https://gateway.pinata.cloud/ipfs/${uri[1]}`}
+                                            controls
+                                            controlslist="nodownload"
                                         />
                                     )}
 
                                     <Card.Footer> 
                                         <InputGroup className="mb-3">
-                                            <Button onClick={() => buyNFT(index)} style={{ width: "100px" }} variant="primary" id="button-addon1" size="sm" disabled={listedState[index] === false}>
+                                            <Button onClick={() => buyNFT(index)} style={{ width: "100px" }} variant="primary" id="button-addon1" size="sm" disabled={nftSupply[index].toString() == 0}>
                                                 Buy {fromWei(listedPrice[index]).toString()} ETH <br /> 
-                                                {listedAmounts[index].toString()} Left
+                                                {nftSupply[index].toString()} Left
                                             </Button>
-                                            <Form.Control onChange={(e) => setPurchaseAmount(e.target.value)} style={{ width: "10px" }} aria-label="Amount purchase" aria-descibedby="basic-addon1" disabled={listedState[index] === false}/>
+                                            <Form.Control onChange={(e) => setPurchaseAmount(e.target.value)} style={{ width: "10px" }} aria-label="Amount purchase" aria-descibedby="basic-addon1" disabled={nftSupply[index].toString() == 0}/>
                                         </InputGroup>
                                     </Card.Footer>
                                 </Card>

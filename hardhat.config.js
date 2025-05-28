@@ -12,7 +12,7 @@ module.exports = {
     disambiguatePaths: false,
     runOnCompile: true,
     strict: true,
-    only: [':ArtistMarketplace$', ':ArtistWhiteList$', ':ArtistMint$', ':Proposals$', ':Events$'],
+    only: [':ArtistMarketplace$', ':ArtistWhiteList$', ':ArtistMint$', ':Proposals$', ':Events$', ':NFTListing$'],
     unit: 'B'
   },
   networks: {

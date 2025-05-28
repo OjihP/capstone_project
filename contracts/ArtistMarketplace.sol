@@ -3,6 +3,8 @@ pragma solidity ^0.8.9;
 
 import "./ArtistMint.sol";
 import "./Events.sol";
+import "./NFTListing.sol";
+import "./ArtistWhiteList.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -17,54 +19,45 @@ interface IERC1155Token {
     function uri(uint256 tokenId) external view returns (string memory);
 }
 
-contract ArtistMarketplace is Events, ERC721, ERC721URIStorage, ERC721Enumerable, ReentrancyGuard, Ownable {
+contract ArtistMarketplace is ERC721, ERC721URIStorage, ERC721Enumerable, ReentrancyGuard, Ownable {
     using Strings for uint256;
     using Counters for Counters.Counter;
 
     address payable private contractCreator;
     ArtistMint private artistMint;
     Events private events;
+    NFTListing private nftListing;
+    ArtistWhiteList private whiteList;
     uint256 private listPrice;
-
-    // Struct to hold necessary file data for NFT
-    struct FileData {
-        string[] fileNames;
-        string[] fileTypes;
-        string[] tokenCIDs;
-        uint256[] nestIDs;
-    }
-
-    // Struct to hold necessary NFT data
-    struct ListedToken {
-        uint256 supplyAmount;
-        uint256 tokenId;
-        string nftName;
-        string artistName;
-        address payable artistAddress;
-        address payable ownerAddress;
-        address payable sellerAddress;
-        uint256 nftPrice;
-        bool currentlyListed;
-    }
-
-    // Mappings to store token data for NFT
-    mapping(uint256 => ListedToken) private idToListedToken;
-    mapping(uint256 => FileData) private idToFileData;
+    Counters.Counter private currentTokenCounter;
 
     constructor() ERC721("ArtistMarketplace", "ARTM") {
         contractCreator = payable(msg.sender);
     }
 
-    function setContractAddresses(address payable _artistMintAddress, address _eventsAddress) external onlyOwner {
+    modifier onlyWhtListed(address caller) {
+        bool chkWhtList = whiteList.isWhitelisted(caller);
+        require(chkWhtList == true, "Unauthorized User(ART)");
+        _;
+    }
+
+    modifier authorizedPersonnel(address caller) {
+        require(caller == contractCreator || whiteList.isWhitelisted(caller) == true, "Unauthorized User(ART1)");
+        _;
+    }
+
+    function setContractAddresses(address _whtListAddress, address payable _artistMintAddress, address _eventsAddress, address _nftListingAddress) external onlyOwner {
         artistMint = ArtistMint(_artistMintAddress);
+        nftListing = NFTListing(_nftListingAddress);
         events = Events(_eventsAddress);
+        whiteList = ArtistWhiteList(_whtListAddress);
     }
 
     function updateListPrice(uint256 _listPrice) external onlyOwner {
         listPrice = _listPrice;
     }
 
-    function getCreatorAddress() external view returns (address) {
+    function getCreatorAddress() public view returns (address) {
         return contractCreator;
     }
 
@@ -72,79 +65,37 @@ contract ArtistMarketplace is Events, ERC721, ERC721URIStorage, ERC721Enumerable
         return listPrice;
     }
 
-    function getListedFromTokenId(uint256 _tokenId) external view returns (ListedToken memory) {
-        return idToListedToken[_tokenId];
-    }
+    function fullNFTRemoval(uint256 _tokenId) external onlyOwner {
+        NFTListing.ListedToken memory listedToken = nftListing.getListedFromTokenId(_tokenId);
+        uint256 amount = artistMint.getMarketTokenBalance(_tokenId);
 
-    function getFileDataFromTokenId(uint256 _tokenId) external view returns (FileData memory) {
-        return idToFileData[_tokenId];
-    }
+        deleteNFTTokens(_tokenId, amount, msg.sender);
 
-    // Logs data into mapping
-    function createListedFileData(
-        uint256 _tokenId,
-        string[] memory _fileNames,
-        string[] memory _fileTypes,
-        string[] memory _tokenCIDs,
-        uint256[] memory _nestIDs
-    ) external {
-        idToFileData[_tokenId] = FileData(
-            _fileNames,
-            _fileTypes,
-            _tokenCIDs,
-            _nestIDs
-        );
-    }
-
-    // Logs data into mapping, and emits event
-    function createListedToken(
-        uint256 _tokenId,
-        uint256 _supplyAmount,
-        string memory _nftName,
-        string memory _artistName,
-        address _artistAddress,
-        address payable _ownerAddress,
-        address payable _sellerAddress,
-        uint256 _nftPrice,
-        bool _currentlyListed
-    ) external payable {
-        require(_nftPrice > 0, "Make sure the price isn't negative");
-
-        idToListedToken[_tokenId] = ListedToken(
-            _supplyAmount,
-            _tokenId,
-            _nftName,
-            _artistName,
-            payable(_artistAddress),
-            _ownerAddress = payable(address(this)),
-            _sellerAddress = payable(_artistAddress),
-            _nftPrice,
-            _currentlyListed
+        events.emitTokenListing(
+            listedToken.tokenId,
+            artistMint.getMarketTokenBalance(_tokenId),
+            listedToken.nftName,
+            listedToken.artistName,
+            listedToken.artistAddress,
+            payable(address(0)),
+            payable(address(0)),
+            listedToken.nftPrice,
+            false
         );
 
-        events.emitEvents(
-            _tokenId,
-            _supplyAmount,
-            _nftName,
-            _artistName,
-            payable(_artistAddress),
-            _ownerAddress = payable(address(this)),
-            _sellerAddress = payable(_artistAddress),
-            _nftPrice,
-            _currentlyListed
-        );
+        nftListing.deleteListedFromTokenId(_tokenId);
+
+        artistMint.decrementTokenCounter();
     }
 
     function executeSale(uint256 _tokenId, uint256 purchaseAmount) external payable {
-        ListedToken storage listedToken = idToListedToken[_tokenId];
-        uint256 _supplyAmount = listedToken.supplyAmount;
+        NFTListing.ListedToken memory listedToken = nftListing.getListedFromTokenId(_tokenId);
+        uint256 _supplyAmount = artistMint.getMarketTokenBalance(_tokenId);
         uint256 _price = listedToken.nftPrice;
         address payable seller = listedToken.sellerAddress;
 
         require(msg.value >= _price * purchaseAmount, "Please submit the asking price in order to complete the purchase");
         require(_supplyAmount >= purchaseAmount, "No remaining tokens to sell");
-
-        _supplyAmount -= purchaseAmount;
 
         for (uint256 i = 0; i < purchaseAmount; i++) {
             artistMint.safeTransferFrom(address(this), msg.sender, _tokenId, 1, "");
@@ -152,59 +103,164 @@ contract ArtistMarketplace is Events, ERC721, ERC721URIStorage, ERC721Enumerable
 
         payable(seller).transfer(msg.value);
 
-        listedToken.supplyAmount = _supplyAmount;
-        if (listedToken.supplyAmount == 0) {
-            idToListedToken[_tokenId].currentlyListed = false;
+        _supplyAmount = artistMint.getMarketTokenBalance(_tokenId);
+
+        if (_supplyAmount == 0) {
+            nftListing.setListedFromTokenId(
+                _tokenId, 
+                _supplyAmount, 
+                listedToken.nftName, 
+                listedToken.artistName, 
+                listedToken.artistAddress,
+                payable(address(0)),
+                payable(address(0)),
+                listedToken.nftPrice,
+                false
+            );
+
+            events.emitTokenListing(
+                _tokenId,
+                _supplyAmount,
+                listedToken.nftName,
+                listedToken.artistName,
+                listedToken.artistAddress,
+                payable(address(0)),
+                payable(address(0)),
+                listedToken.nftPrice,
+                false
+            );
         }
-        listedToken.ownerAddress = payable(msg.sender);
-        listedToken.sellerAddress = payable(msg.sender);
+
+        nftListing.setListedFromTokenId(
+            _tokenId, 
+            _supplyAmount, 
+            listedToken.nftName, 
+            listedToken.artistName, 
+            listedToken.artistAddress,
+            payable(msg.sender),
+            payable(msg.sender),
+            listedToken.nftPrice,
+            listedToken.currentlyListed
+        );
     }
 
-    function replenishNFTTokens(uint256 _tokenId, uint256 mintAmount, bytes memory data) external payable nonReentrant {
-        ListedToken storage listedToken = idToListedToken[_tokenId];
+    function replenishNFTTokens(uint256 _tokenId, uint256 mintAmount, bytes memory data, address caller) external payable nonReentrant onlyWhtListed (caller){
+        NFTListing.ListedToken memory listedToken = nftListing.getListedFromTokenId(_tokenId);
         uint256 mintPrice = listPrice * mintAmount;
+        uint256 _supplyAmount = artistMint.getMarketTokenBalance(_tokenId);
 
         // Ensure enough ETH is sent to cover the minting cost
         require(msg.value >= mintPrice, "Insufficient funds for minting");
 
         // Call the ArtistMint contract and forward the value (msg.value)
-        artistMint.mintTokens{value: msg.value}(_tokenId, mintAmount, mintPrice, data);
+        artistMint.mintTokens{value: msg.value}(_tokenId, mintAmount, mintPrice, data, caller);
+
+        _supplyAmount = artistMint.getMarketTokenBalance(_tokenId);
 
         // Update the supply in ArtistMarketplace after replenishment
-        listedToken.supplyAmount += mintAmount;
-        if (listedToken.supplyAmount > 0) {
-            idToListedToken[_tokenId].currentlyListed = true;
+        if (_supplyAmount > 0) {
+            nftListing.setListedFromTokenId(
+                _tokenId, 
+                _supplyAmount,
+                listedToken.nftName, 
+                listedToken.artistName, 
+                listedToken.artistAddress,
+                payable(msg.sender),
+                payable(msg.sender),
+                listedToken.nftPrice,
+                true
+            );
+            
+            events.emitTokenListing(
+                _tokenId,
+                _supplyAmount,
+                listedToken.nftName,
+                listedToken.artistName,
+                listedToken.artistAddress,
+                payable(msg.sender),
+                payable(msg.sender),
+                listedToken.nftPrice,
+                true
+            );
         }
+
+        nftListing.setListedFromTokenId(
+            _tokenId, 
+            _supplyAmount,
+            listedToken.nftName, 
+            listedToken.artistName, 
+            listedToken.artistAddress,
+            payable(msg.sender),
+            payable(msg.sender),
+            listedToken.nftPrice,
+            listedToken.currentlyListed
+        );
     }
 
-    function deleteNFTTokens(uint256 _tokenId, uint256 amount) external nonReentrant {
-        ListedToken storage listedToken = idToListedToken[_tokenId];
+    function deleteNFTTokens(uint256 _tokenId, uint256 amount, address caller) public nonReentrant authorizedPersonnel(caller) {
+    NFTListing.ListedToken memory listedToken = nftListing.getListedFromTokenId(_tokenId);
+    uint256 _supplyAmount = artistMint.getMarketTokenBalance(_tokenId);
 
-        require(listedToken.supplyAmount >= amount, "Amount exceeds listed supply");
+    require(listedToken.supplyAmount >= amount, "Amount exceeds listed supply");
 
-        // Calculate the refund based on the listed price and the amount of tokens burned
-        uint256 refundAmount = listPrice * amount;
+    // Calculate the refund based on the listed price and the amount of tokens burned
+    uint256 refundAmount = listPrice * amount;
 
-        // Ensure the contract has enough balance to refund
-        require(address(artistMint).balance >= refundAmount, "Insufficient balance in ArtistMint.sol");
+    // Ensure the contract has enough balance to refund
+    require(address(artistMint).balance >= refundAmount, "Insufficient balance in ArtistMint.sol");
 
-        // Update the supply in your mapping
-        listedToken.supplyAmount -= amount;
+    // Transfer the refund to the artist that created it
+    artistMint.transferRefund(refundAmount, listedToken.artistAddress, caller);
 
-        // If all tokens are burned, remove the listing
-        if (listedToken.supplyAmount == 0) {
-            idToListedToken[_tokenId].currentlyListed = false;
-        }
+    // Burn the tokens
+    artistMint.burnTokens(_tokenId, amount, caller);
 
-        // Transfer the refund to the artist that created it
-        artistMint.transferRefund(refundAmount, listedToken.artistAddress);
+    // Update supply amount AFTER burning tokens
+    _supplyAmount = artistMint.getMarketTokenBalance(_tokenId);
 
-        // Burn the tokens
-        artistMint.burnTokens(_tokenId, amount);
+    // If all tokens are burned, rewrite the listing
+    if (_supplyAmount == 0) {
+        nftListing.setListedFromTokenId(
+            _tokenId, 
+            _supplyAmount,
+            listedToken.nftName, 
+            listedToken.artistName, 
+            listedToken.artistAddress,
+            payable(address(0)),
+            payable(address(0)),
+            listedToken.nftPrice,
+            false
+        );
+
+        events.emitTokenListing(
+            _tokenId,
+            _supplyAmount,
+            listedToken.nftName,
+            listedToken.artistName,
+            listedToken.artistAddress,
+            payable(address(0)),
+            payable(address(0)),
+            listedToken.nftPrice,
+            false
+        );
     }
+
+    // Update the supply in your mapping
+    nftListing.setListedFromTokenId(
+        _tokenId, 
+        _supplyAmount,
+        listedToken.nftName, 
+        listedToken.artistName, 
+        listedToken.artistAddress,
+        listedToken.ownerAddress,
+        listedToken.sellerAddress,
+        listedToken.nftPrice,
+        listedToken.currentlyListed
+    );
+}
 
     // Transfers funds from ArtistMarketplace contract to recipient via a proposal
-    function transferFunds(address payable recipient, uint256 amount) external {
+    function transferFunds(address payable recipient, uint256 amount, address caller) external onlyWhtListed (caller){
         require(address(this).balance >= amount, "Insufficient balance in ArtistMarketplace");
         (bool success, ) = recipient.call{value: amount}("");
         require(success, "Transfer failed");

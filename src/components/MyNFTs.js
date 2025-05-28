@@ -7,8 +7,9 @@ import ReactPlayer from 'react-player';
 const toWei = (n) => ethers.utils.parseEther(n.toString());
 const fromWei = (n) => ethers.utils.formatEther(n);
 
-const MyNFTs = ({ provider, artnft, minter, account }) => {
+const MyNFTs = ({ provider, artnft, minter, listings, account }) => {
   const [_nftNames, setTokenNames] = useState([]);
+  const [_artistNames, setArtistNames] = useState([]);
   const [myListedCIDs, setMyTokenCIDs] = useState([]);
   const [listedPrice, setListedPrice] = useState([]);
   const [_fileNames, setFileNames] = useState([]);
@@ -20,7 +21,8 @@ const MyNFTs = ({ provider, artnft, minter, account }) => {
   const [show, setShow] = useState(false);
   const [selectedNFT, setSelectedNFT] = useState(null);
   const [nestIDTabs, setNestIDTabs] = useState({});
-  const [_tokenIdArray, setTokenIdArray] = useState([])
+  const [_tokenIdArray, setTokenIdArray] = useState([]);
+  const [NFTsListed, setListedNFTs] = useState(true);
 
   const handleClose = () => setShow(false);
 
@@ -30,6 +32,7 @@ const MyNFTs = ({ provider, artnft, minter, account }) => {
   };
 
   const getMyNFTs = async () => {
+
     try {
       const signer = await provider.getSigner();
       const count = await minter.getCurrentTokenCounter();
@@ -39,7 +42,8 @@ const MyNFTs = ({ provider, artnft, minter, account }) => {
       const tokenBalances = [];
 
       for (let i = 0; i < count; i++) {
-        const tokenInfo = await artnft.getListedFromTokenId(i + 1);
+        const tokenInfo = await listings.getListedFromTokenId(i + 1);
+        console.log(tokenInfo)
         const tokenBalance = await minter.balanceOf(account, i + 1);
         if (tokenBalance > 0) {
           tokenIdArray.push(tokenInfo.tokenId);
@@ -49,15 +53,24 @@ const MyNFTs = ({ provider, artnft, minter, account }) => {
         }
       }
 
+      // Check if all arrays are empty
+      if (tokenIdArray.length === 0 && fileDataIdArray.length === 0 && tokenBalances.length === 0) {
+        setListedNFTs(false);
+      } else {
+        setListedNFTs(true);
+      }
+
+      console.log("Listed NFTs: ", NFTsListed)
+
       // Helper function to get token details
       const getTokenDetails = async (tokenId) => {
-        const tokenDetails = await artnft.connect(signer).getListedFromTokenId(tokenId);
+        const tokenDetails = await listings.connect(signer).getListedFromTokenId(tokenId);
         return tokenDetails;
       };
 
       // Helper function to get token details
       const getTokenFileDetails = async (tokenId) => {
-        const tokenFileDetails = await artnft.connect(signer).getFileDataFromTokenId(tokenId);
+        const tokenFileDetails = await listings.connect(signer).getFileDataFromTokenId(tokenId);
         return tokenFileDetails;
       };
 
@@ -70,6 +83,7 @@ const MyNFTs = ({ provider, artnft, minter, account }) => {
 
       // Extract specific details
       const tokenNames = tokenDetails.map(details => details.nftName);
+      const artistNames = tokenDetails.map(details => details.artistNames);
       const tokenPrices = tokenDetails.map(details => details.nftPrice.toString());
       const tokenAmounts = tokenDetails.map(details => details.supplyAmount);
       const listedTokens = tokenDetails.map(details => details.currentlyListed);
@@ -117,6 +131,7 @@ const MyNFTs = ({ provider, artnft, minter, account }) => {
 
       // Update the state
       setTokenNames(tokenNames);
+      setArtistNames(artistNames);
       setMyTokenCIDs(tokenCIDs);
       setListedPrice(tokenPrices);
       setFileTypes(fileTypes);
@@ -182,44 +197,49 @@ const MyNFTs = ({ provider, artnft, minter, account }) => {
     if (account) {
       getMyNFTs();
     }
-  }, [account, provider, artnft, minter]);
+  }, [account, provider, artnft, minter, NFTsListed]);
 
   return (
     <div className='padding-fromNav text-center'>
       <p><strong>MY NFTs</strong></p>
       <div className="px-5 py-3 container">
-        <Row xs={1} md={2} lg={4} className="g-4 py-3">
-          {myListedCIDs.map((uri, index) => {
-            const tokenId = _tokenIdArray[index]
-            return (
-              <Col key={index} className="overflow-hidden">
-                <Card bg="dark" border="primary" style={{ width: "190px", height: "350px" }}>
-                  <Card.Header>
-                    <Form.Control className="text-center" plaintext readOnly style={{ color: 'white' }} defaultValue={_nftNames[index]} onClick={() => handleShow(index, tokenId)} />
-                  </Card.Header>
-                  <Card.Img 
-                    variant="top" 
-                    src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`} 
-                    height="200px"
-                    width="100%"
-                    onClick={() => handleShow(index, tokenId)}
-                  />
-                  {audioFilePresent[index] && (
-                    <ReactAudioPlayer
-                      style={{ width: "189px", height: "20px" }}
-                      src={`https://gateway.pinata.cloud/ipfs/${uri[1]}`}
-                      controls
-                      controlslist="nodownload"
+        {!NFTsListed ? (
+          <p>No NFTs Purchased</p>
+        ) : (
+          <Row xs={1} md={2} lg={4} className="g-4 py-3">
+            {myListedCIDs.map((uri, index) => {
+              const tokenId = _tokenIdArray[index]
+              return (
+                <Col key={index} className="overflow-hidden">
+                  <Card bg="dark" border="primary" style={{ width: "190px", height: "350px" }}>
+                    <Card.Header>
+                      <Form.Control className="text-center" plaintext readOnly style={{ color: 'white' }} defaultValue={_nftNames[index]} onClick={() => handleShow(index, tokenId)} />
+                      <small style={{ color: 'white', fontSize: '0.6rem' }} >{_artistNames[index]}</small>
+                    </Card.Header>
+                    <Card.Img 
+                      variant="top" 
+                      src={`https://gateway.pinata.cloud/ipfs/${uri[0]}`} 
+                      height="200px"
+                      width="100%"
+                      onClick={() => handleShow(index, tokenId)}
                     />
-                  )}
-                  <Card.Footer>
-                    <strong style={{ color: 'white '}}>Quantity: {nftSupply[index].toString()}</strong>
-                  </Card.Footer>
-                </Card>
-              </Col>
-            )
-          })}
-        </Row>
+                    {audioFilePresent[index] && (
+                      <ReactAudioPlayer
+                        style={{ width: "189px", height: "20px" }}
+                        src={`https://gateway.pinata.cloud/ipfs/${uri[1]}`}
+                        controls
+                        controlslist="nodownload"
+                      />
+                    )}
+                    <Card.Footer>
+                      <strong style={{ color: 'white '}}>Quantity: {nftSupply[index].toString()}</strong>
+                    </Card.Footer>
+                  </Card>
+                </Col>
+              )
+            })}
+          </Row>
+        )}
       </div>
 
       <Modal show={show} onHide={handleClose} centered>

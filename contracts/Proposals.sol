@@ -10,7 +10,8 @@ contract Proposals {
     Counters.Counter private proposalCount;
     uint256 private quorum;
     ArtistMarketplace private artistMarketplace;
-    ArtistWhiteList private artistWhiteList;
+    ArtistWhiteList private whiteList;
+    address private contractCreator;
 
     mapping(uint256 => Proposal) private proposals;
     mapping(address => mapping(uint256 => bool)) private votes;
@@ -32,12 +33,25 @@ contract Proposals {
         address recipient,
         address creator
     );
+    
     event Vote(uint256 id, address voter);
     event Finalize(uint256 id);
 
     constructor(address payable marketplaceAddress, address whiteListAddress) {
         artistMarketplace = ArtistMarketplace(marketplaceAddress);
-        artistWhiteList = ArtistWhiteList(whiteListAddress);
+        whiteList = ArtistWhiteList(whiteListAddress);
+        contractCreator = artistMarketplace.getCreatorAddress();
+    }
+
+    modifier onlyWhtListed(address caller) {
+        bool chkWhtList = whiteList.isWhitelisted(caller);
+        require(chkWhtList == true, "Unauthorized User(POSE)");
+        _;
+    }
+
+    modifier authorizedPersonnel(address caller) {
+        require(caller == contractCreator || whiteList.isWhitelisted(caller) == true, "Unauthorized User(POSE1)");
+        _;
     }
 
     function getProposalCount() external view returns (uint256) {
@@ -52,19 +66,22 @@ contract Proposals {
         return quorum;
     }
 
-    function initializeQuorum() external returns (uint256) {
+    function initializeQuorum(address caller) external authorizedPersonnel (caller) returns (uint256) {
         // Set quorum based on the number of white listed users
-        uint256 totalListed = artistWhiteList.getCurrentWhtListCounter();
-        ArtistWhiteList.UserInfo[] memory totalWhtListedArray;
+        uint256 totalListed = whiteList.getCurrentWhtListCounter();
+        ArtistWhiteList.UserInfo[] memory totalWhtListedArray = new ArtistWhiteList.UserInfo[](totalListed);
+
+        uint256 whtListedCount = 0;
         
-        for (uint256 i = 1; i < totalListed; i++) {
-            ArtistWhiteList.UserInfo memory userInfo = artistWhiteList.getUserByNumber(i);
+        for (uint256 i = 1; i <= totalListed; i++) {
+            ArtistWhiteList.UserInfo memory userInfo = whiteList.getUserByNumber(i);
             if (userInfo.isListed == true) {
-                totalWhtListedArray[i] = userInfo;
+                totalWhtListedArray[whtListedCount] = userInfo;
+                whtListedCount++;
             }
         }
 
-        uint256 totalWhtListed = totalWhtListedArray.length;
+        uint256 totalWhtListed = whtListedCount;
         
         uint256 numerator = totalWhtListed * 70;
         uint256 denominator = 100;
@@ -72,7 +89,7 @@ contract Proposals {
         uint256 remainder = numerator % denominator;
 
         // Check the remainder to determine if we should round up or down
-        if (remainder * 2 >= denominator) {
+        if (remainder >= 50) {
             quorum = quotient + 1; // Round up
         } else {
             quorum = quotient; // Round down
@@ -87,8 +104,9 @@ contract Proposals {
         string memory _description,
         uint256 _amount,
         address payable _recipient,
-        uint256 _recipientBalance
-    ) public {
+        uint256 _recipientBalance,
+        address caller
+    ) public onlyWhtListed (caller) {
         proposalCount.increment();
         uint proposalId = proposalCount.current();
 
@@ -112,7 +130,7 @@ contract Proposals {
     }
 
     // Up vote a proposal
-    function voteUp(uint256 _id) external {
+    function voteUp(uint256 _id, address caller) external onlyWhtListed (caller) {
         Proposal storage proposal = proposals[_id];
 
         require(!votes[msg.sender][_id], "Already voted");
@@ -128,7 +146,7 @@ contract Proposals {
     }
 
     // Finalize proposal & transfer funds
-    function finalizeProposal(uint256 _id) external {
+    function finalizeProposal(uint256 _id, address caller) external onlyWhtListed (caller) {
         Proposal storage proposal = proposals[_id];
 
         require(!proposal.finalized, "Proposal already finalized");
@@ -136,7 +154,7 @@ contract Proposals {
         require(address(artistMarketplace).balance >= proposal.amount, "Amount exceeds contract funds");
 
         // Transfer the funds to recipient from marketplace contract
-        artistMarketplace.transferFunds(proposal.recipient, proposal.amount);
+        artistMarketplace.transferFunds(proposal.recipient, proposal.amount, caller);
 
         proposal.finalized = true;
 

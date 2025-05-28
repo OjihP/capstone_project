@@ -4,22 +4,29 @@ import { Row, Col, Card, Form, Modal, Tabs, Tab, Table, ListGroup, InputGroup, B
 import ReactAudioPlayer from 'react-audio-player'
 import ReactPlayer from 'react-player';
 
+import config from '../config.json';
+
 const toWei = (n) => ethers.utils.parseEther(n.toString())
 const fromWei = (n) => ethers.utils.formatEther(n)
 
-const Admin = ({ provider, artnft, minter, whtList, pose, account }) => {
+const Admin = ({ provider, artnft, minter, whtList, pose, listings, account }) => {
     const [userAddress, setUserAddress] = useState('')
     const [userName, setUserName] = useState('')
     const [userNumber, setUserNumber] = useState('');
     const [listPrice, setListPrice] = useState(0)
     const [initialListPrice, setInitialListPrice] = useState(0)
+    const [mintBalance, setMintBalance] = useState(0);
+    const [marketBalance, setMarketBalance] = useState(0);
     const [_usersOnWhtList, setUsersWhtListed] = useState([]);
+    const [showNonWhitelisted, setShowNonWhitelisted] = useState(true);
 
     const [burnAmount, setBurnAmount] = useState(0)
     const [mintAmount, setMintAmount] = useState('');
     const [_tokenIdArray, setTokenIdArray] = useState([])
+    const [nftSupply, setNFTSupply] = useState([]);
 
     const [_nftNames, setTokenNames] = useState([])
+    const [_artistNames, setArtistNames] = useState([])
     const [listedCIDs, setTokenCIDs] = useState([])
     const [listedPrice, setListedPrice] = useState([])
     const [_fileTypes, setFileTypes] = useState([])
@@ -31,126 +38,160 @@ const Admin = ({ provider, artnft, minter, whtList, pose, account }) => {
     const [selectedNFT, setSelectedNFT] = useState(null);
     const [nestIDTabs, setNestIDTabs] = useState({});
 
+    const [variables, setVariables] = useState('')
+    const [msgsender, setSigner] = useState('')
+
+    const toggleVisibility = () => {
+        setShowNonWhitelisted((prevState) => !prevState);
+    };
+
     const handleClose = () => setShow(false);
 
     const handleShow = (index, tokenId) => {
         setSelectedNFT({ index, tokenId });
         setShow(true);
     };
-    
-    /*const initializeArtist = async () => {
-        const signer = await provider.getSigner()
-
-        const transaction = await whtList.connect(signer).addToWhtList(userAddress, userName)
-        await transaction.wait()
-
-        const initializedInfo = await whtList.connect(signer).getUserByNumber(1)
-
-        console.log(initializedInfo)
-        console.log(initializedInfo.nameForAddress)
-        console.log(initializedInfo.userAddress)
-        console.log(initializedInfo.userNumber.toString())
-        
-        setInitialName(initializedInfo.nameForAddress)
-        setInitialAddress(initializedInfo.userAddress)
-        setInitialNumber(initializedInfo.userNumber.toString())
-    }*/
 
     const addUserToWhiteList = async () => {
-        const signer = await provider.getSigner();
-        const transaction = await whtList.connect(signer).addToWhtList(userAddress, userName);
-        await transaction.wait();
-        displayWhiteListedUsers();
+        try {
+            const signer = await provider.getSigner();
+            const transaction = await whtList.connect(signer).addToWhtList(userAddress, userName);
+            await transaction.wait();
+            await pose.connect(signer).initializeQurom();
+            displayWhiteListedUsers();
+        } catch {
+
+        }
     };
 
     const removeUserFromWhiteList = async () => {
-        const signer = await provider.getSigner();
-        const userNumberInt = parseInt(userNumber, 10);
+        try {
+            const signer = await provider.getSigner();
+            const userNumberInt = parseInt(userNumber, 10);
 
-        const totalUsers = await whtList.getCurrentWhtListCounter();
-        if (userNumberInt > totalUsers || userNumberInt <= 0) {
-            alert('Invalid user number');
-            return;
+            const totalUsers = await whtList.getCurrentWhtListCounter();
+            if (userNumberInt > totalUsers || userNumberInt <= 0) {
+                alert('Invalid user number');
+                return;
+            }
+
+            const transaction = await whtList.connect(signer).removeFromWhtList(userNumberInt);
+            await transaction.wait();
+            await pose.connect(signer).initializeQuorum();
+            displayWhiteListedUsers();
+        } catch {
+            
         }
-
-        const transaction = await whtList.connect(signer).removeFromWhtList(userNumberInt);
-        await transaction.wait();
-        displayWhiteListedUsers();
     };
 
     const displayWhiteListedUsers = async () => {
-        const count = await whtList.getCurrentWhtListCounter();
-        const items = [];
+        try {
+            const count = await whtList.getCurrentWhtListCounter();
+            const items = [];
+            console.log(count.toString())
 
-        for (let i = 0; i < count; i++) {
-            try {
-                const userInfo = await whtList.getUserByNumber(i + 1);
-                items.push(userInfo);
-            } catch (error) {
-                console.error(`Error fetching user at index ${i + 1}:`, error);
+            for (let i = 0; i < count; i++) {
+                try {
+                    const userInfo = await whtList.getUserByNumber(i + 1);
+                    items.push(userInfo);
+                } catch (error) {
+                    console.error(`Error fetching user at index ${i + 1}: `, error);
+                    window.alert(`Error fetching user at index ${i + 1}: `, error)
+                }
             }
-        }
 
-        setUsersWhtListed(items);
+            setUsersWhtListed(items);
+        } catch {
+            
+        }
     };
 
+    const getContractBalance = async () => {
+        try {
+            const network = await provider.getNetwork();
+            const chainId = network.chainId;
+            const networkConfig = config[chainId];
+
+            const mintContractBalance = await provider.getBalance(networkConfig.artistMinter.address);
+            console.log("Mint Contract Balance", fromWei(mintContractBalance.toString()))
+
+            const marketplaceBalance = await provider.getBalance(networkConfig.artistContract.address);
+            console.log("Marketplace Contract Balance", fromWei(marketplaceBalance.toString()))
+
+            setMintBalance(fromWei(mintContractBalance))
+            setMarketBalance(fromWei(marketplaceBalance))
+        } catch {
+            
+        }
+    }
+
     const getListPrice = async () => {
-        const currentListPrice = await artnft.getListPrice()
-        const currentListPriceWei = fromWei(currentListPrice)
-        console.log(currentListPriceWei)
-        setInitialListPrice(currentListPriceWei)
+        try {
+            const currentListPrice = await artnft.getListPrice()
+            const currentListPriceWei = fromWei(currentListPrice)
+            console.log(currentListPriceWei)
+            setInitialListPrice(currentListPriceWei)
+        } catch {
+            
+        }
+        
     }
 
     const changeListPrice = async () => {
-        const signer = await provider.getSigner()
-        console.log(listPrice)
-        const listPriceWei = toWei(listPrice)
-        console.log(listPriceWei.toString())
+        try {
+            const signer = await provider.getSigner()
+            console.log(listPrice)
+            const listPriceWei = toWei(listPrice)
+            console.log(listPriceWei.toString())
 
-        const transaction = await artnft.connect(signer).updateListPrice(listPriceWei)
-        await transaction.wait()
+            const transaction = await artnft.connect(signer).updateListPrice(listPriceWei)
+            await transaction.wait()
 
-        getListPrice()
+            getListPrice()
+        } catch {
+            
+        }
     }
 
     const loadAllNFTs = async () => {
+        const network = await provider.getNetwork();
+        const chainId = network.chainId;
+        const networkConfig = config[chainId];
+
         try {
             const signer = await provider.getSigner();
             const count = await minter.getCurrentTokenCounter();
             const tokenIdArray = [];
             const fileDataIdArray = [];
+            const tokenBalances = [];
 
             console.log("Total tokens count:", count.toString());
-
-    
-            // Retrieve token IDs
-            /*for (let i = 0; i < count; i++) {
-                const userInfo = await artnft.connect(signer).idToListedToken(i + 1);
-                items.push(userInfo.tokenId);
-            }*/
 
             // Retrieve token IDs
             for (let i = 0; i < count; i++) {
                 try {
-                    const tokenInfo = await artnft.getListedFromTokenId(i + 1); // Ensure idToListedToken is defined in the contract
+                    const tokenInfo = await listings.getListedFromTokenId(i + 1);
+                    const tokenBalance = await minter.balanceOf(networkConfig.artistContract.address, i + 1);
                     tokenIdArray.push(tokenInfo.tokenId);
                     fileDataIdArray.push(tokenInfo.tokenId);
+                    tokenBalances.push(tokenBalance);
                     console.log(`Token ID ${i + 1}:`, tokenInfo.tokenId.toString());
                     setTokenIdArray(tokenIdArray)
                 } catch (innerError) {
-                    console.error(`Error retrieving token info for token ID ${i + 1}:`, innerError);
+                    console.error(`Error retrieving token info for token ID ${i + 1}: `, innerError);
+                    window.alert(`Error retrieving token info for token ID ${i + 1}: `, innerError)
                 }
             }
     
             // Helper function to get token details
             const getTokenDetails = async (tokenId) => {
-                const tokenDetails = await artnft.connect(signer).getListedFromTokenId(tokenId);
+                const tokenDetails = await listings.connect(signer).getListedFromTokenId(tokenId);
                 return tokenDetails;
             };
 
             // Helper function to get token details
             const getTokenFileDetails = async (tokenId) => {
-                const tokenFileDetails = await artnft.connect(signer).getFileDataFromTokenId(tokenId);
+                const tokenFileDetails = await listings.connect(signer).getFileDataFromTokenId(tokenId);
                 return tokenFileDetails;
             };
     
@@ -163,6 +204,7 @@ const Admin = ({ provider, artnft, minter, whtList, pose, account }) => {
     
             // Extract specific details
             const tokenNames = tokenDetails.map(details => details.nftName);
+            const artistNames = tokenDetails.map(details => details.artistName);
             const tokenPrices = tokenDetails.map(details => details.nftPrice.toString());
             const tokenAmounts = tokenDetails.map(details => details.supplyAmount);
             const listedTokens = tokenDetails.map(details => details.currentlyListed);
@@ -170,7 +212,7 @@ const Admin = ({ provider, artnft, minter, whtList, pose, account }) => {
             const fileNames = tokenFileDetails.map(details => details.fileNames);
             const fileTypes = tokenFileDetails.map(details => details.fileTypes);
             const tokenCIDs = tokenFileDetails.map(details => details.tokenCIDs);
-            const nestIDs = tokenFileDetails.map(details => details.nestIDs)
+            const nestIDs = tokenFileDetails.map(details => details.nestIDs);
     
             // Log the details
             console.log("Token Names:", tokenNames);
@@ -210,9 +252,11 @@ const Admin = ({ provider, artnft, minter, whtList, pose, account }) => {
 
             console.log(nestIDTabs)
             console.log(tabsData)
+            console.log(tokenBalances.toString())
 
             // Update the state
             setTokenNames(tokenNames);
+            setArtistNames(artistNames);
             setTokenCIDs(tokenCIDs);
             setListedPrice(tokenPrices);
             setFileTypes(fileTypes);
@@ -220,6 +264,7 @@ const Admin = ({ provider, artnft, minter, whtList, pose, account }) => {
             setListedState(listedTokens);
             setNestIDTabs(tabsData)
             setNestIDs(nestIDs);
+            setNFTSupply(tokenBalances)
     
             // Additional processing
             const audioPresentList = fileTypes.map(types => {
@@ -271,89 +316,49 @@ const Admin = ({ provider, artnft, minter, whtList, pose, account }) => {
                     </ListGroup.Item>
                 );
             } else {
-                console.error('Unexpected type:', fileType);
+                console.error('Unexpected type: ', fileType);
+                window.alert('Unexpected type: ', fileType)
             }
         }
         return null;
     };
 
-    const addNFT = async (index) => {
+    const nftRemoval = async (index) => {
         try {
             const signer = await provider.getSigner();
             const tokenId = _tokenIdArray[index]
-            console.log(tokenId)
-            console.log(await artnft.getListedFromTokenId(tokenId))
-
-            await artnft.connect(signer).replenishNFTTokens(tokenId, mintAmount, ethers.utils.hexlify([]));
-
+            console.log(tokenId.toString())
+            console.log(await listings.getListedFromTokenId(tokenId))
+            await artnft.connect(signer).fullNFTRemoval(tokenId);
             loadAllNFTs();
-    
-            console.log(`Replenished NFT Tokens at index: ${tokenId}`);
         } catch (error) {
-            console.error("Error adding NFT Tokens:", error);
-        }
-    };
+            console.log("Error removing NFT:", error)
+            window.alert('Error removing NFT: ', error)
+        }   
+    }
 
-    const deleteNFT = async (index) => {
-        try {
-            const signer = await provider.getSigner();
-            const tokenId = _tokenIdArray[index]
-            console.log(tokenId)
-            console.log(await artnft.getListedFromTokenId(tokenId))
+    const chkVariables = async () => {
+        const signer = await provider.getSigner()
+        const adminAddress = await artnft.getCreatorAddress();
+        const senderAddress = await signer.getAddress();
+        
+        setVariables(adminAddress);
+        setSigner(senderAddress)
 
-            /*// Remove the selected NFT from the tokenIdArray and fileDataIdArray
-            const updatedTokenIdArray = [..._tokenIdArray];
-            const updatedFileDataIdArray = [..._fileDataIdArray];
-    
-            // Remove the NFT at the specified index
-            updatedTokenIdArray.splice(tokenId, 1);
-            updatedFileDataIdArray.splice(tokenId, 1);
-    
-            // Update the state variables
-            setTokenIdArray(updatedTokenIdArray);
-            setFileDataIdArray(updatedFileDataIdArray);
-    
-            // Optional: Remove associated data from other state variables (e.g., names, CIDs)
-            const updatedNames = [..._nftNames];
-            const updatedCIDs = [...listedCIDs];
-            const updatedPrices = [...listedPrice];
-            const updatedAmounts = [...listedAmounts];
-            const updatedFileTypes = [..._fileTypes];
-            const updatedNestIDTabs = { ...nestIDTabs };
-    
-            updatedNames.splice(tokenId, 1);
-            updatedCIDs.splice(tokenId, 1);
-            updatedPrices.splice(tokenId, 1);
-            updatedAmounts.splice(tokenId, 1);
-            updatedFileTypes.splice(tokenId, 1);
-            delete updatedNestIDTabs[_tokenIdArray[tokenId]]; // Assuming nestIDTabs is keyed by tokenId
-    
-            setTokenNames(updatedNames);
-            setTokenCIDs(updatedCIDs);
-            setListedPrice(updatedPrices);
-            setMintAmounts(updatedAmounts);
-            setFileTypes(updatedFileTypes);
-            setNestIDTabs(updatedNestIDTabs);*/
-
-            await artnft.connect(signer).deleteNFTTokens(tokenId, burnAmount);
-
-            loadAllNFTs();
-    
-            console.log(`Deleted NFT at index: ${tokenId}`);
-        } catch (error) {
-            console.error("Error deleting NFT:", error);
-        }
-    };
+    }
 
     useEffect(() => {
         displayWhiteListedUsers();
         loadAllNFTs();
         getListPrice();
-    }, []);
+        getContractBalance();
+        chkVariables();
+    }, [artnft, whtList]);
  
     return (
         <div className='padding-fromNav text-center'>
             <p><strong>Set Artist WhiteList Status</strong></p>
+            <p>{variables}, {msgsender}</p>
             <p>All Whitelisted Artists:</p>
             <Table striped bordered hover responsive variant="dark">
                 <thead>
@@ -365,16 +370,23 @@ const Admin = ({ provider, artnft, minter, whtList, pose, account }) => {
                     </tr>
                 </thead>
                 <tbody>
-                    {_usersOnWhtList.map((info, index) => (
-                        <tr key={index}>
-                            <td>{info.userNumber.toString()}</td>
-                            <td>{info.nameForAddress}</td>
-                            <td>{info.userAddress}</td>
-                            <td>{info.isListed.toString()}</td>
-                        </tr>
-                    ))}
+                    {_usersOnWhtList
+                        .filter((info) => showNonWhitelisted || info.isListed) // Show all or only whitelisted users
+                        .map((info, index) => (
+                            <tr key={index}>
+                                <td>{info.userNumber.toString()}</td>
+                                <td>{info.nameForAddress}</td>
+                                <td>{info.userAddress}</td>
+                                <td>{info.isListed.toString()}</td>
+                            </tr>
+                        ))}
                 </tbody>
             </Table>
+
+            <Button onClick={toggleVisibility} variant="primary" size="lg">
+                {showNonWhitelisted ? "Hide Non-Whitelisted Users" : "Show All Users"}
+            </Button>
+
             <p><strong>Add User to White List</strong></p>    
             <Form.Control onChange={(e) => setUserAddress(e.target.value)} size="lg" required type="text" placeholder="Type or paste user address here" />
             <Form.Control onChange={(e) => setUserName(e.target.value)} size="lg" required type="text" placeholder="Type or paste username here" />
@@ -409,9 +421,10 @@ const Admin = ({ provider, artnft, minter, whtList, pose, account }) => {
                                         plaintext 
                                         readOnly 
                                         style={{ color: 'white' }} 
-                                        defaultValue={_nftNames[index]} 
+                                        defaultValue={_nftNames[index]}
                                         onClick={() => handleShow(index, tokenId)} 
                                         />
+                                        <small style={{ color: 'white', fontSize: '0.6rem' }} >{_artistNames[index]}</small>
                                     </Card.Header>
 
                                     <div style={{ position: "relative", height: "200px" }}>
@@ -457,25 +470,22 @@ const Admin = ({ provider, artnft, minter, whtList, pose, account }) => {
                                     )}
 
                                     <Card.Footer>
-                                        <strong style={{ color: 'white '}}>Quantity: {listedAmounts[index].toString()}</strong>
-                                        <InputGroup>
-                                        <Button onClick={() => addNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
-                                            Add NFT
+                                        <strong style={{ color: 'white '}}>Quantity: {nftSupply[index].toString()}</strong>
+                                        <Button onClick={() => nftRemoval(index)} style={{ width: "100px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
+                                            Remove NFT
                                         </Button>
-                                        <Form.Control onChange={(e) => setMintAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to mint" aria-descibedby="basic-addon1" />
-                                        </InputGroup>
-                                        <InputGroup>
-                                        <Button onClick={() => deleteNFT(index)} style={{ height: "25px", width: "75px", fontSize: '0.7rem' }} variant="primary" id="button-addon1" size="sm">
-                                            Delete NFT
-                                        </Button>
-                                        <Form.Control onChange={(e) => setBurnAmount(e.target.value)} style={{ height: "25px", width: "1px" }} aria-label="Amount to burn" aria-descibedby="basic-addon1" />
-                                        </InputGroup>
                                     </Card.Footer>
                                 </Card>
                             </Col>
                         )
                     })}
                 </Row>
+            </div>
+
+            <h1><strong>Contract Balances</strong></h1>
+            <div>
+                <p>Mint Contract Balance: {mintBalance} ETH</p>
+                <p>Market Contract Balance: {marketBalance} ETH</p>
             </div>
 
             <Modal show={show} onHide={handleClose} centered>

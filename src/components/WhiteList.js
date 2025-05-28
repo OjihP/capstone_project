@@ -2,16 +2,22 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { Row, Form, Button, Table, Container } from 'react-bootstrap';
 
-const WhiteList = ({ provider, whtList, account }) => {
+const WhiteList = ({ provider, whtList, pose }) => {
     const [_usersOnWhtList, setUsersWhtListed] = useState([]);
     const [userAddress, setUserAddress] = useState('');
     const [userName, setUserName] = useState('');
     const [userNumber, setUserNumber] = useState('');
+    const [showNonWhitelisted, setShowNonWhitelisted] = useState(true); // Toggle state
+
+    const toggleVisibility = () => {
+        setShowNonWhitelisted((prevState) => !prevState);
+    };
 
     const addUserToWhiteList = async () => {
         const signer = await provider.getSigner();
         const transaction = await whtList.connect(signer).addToWhtList(userAddress, userName);
         await transaction.wait();
+        await pose.connect(signer).initializeQuorum();
         displayWhiteListedUsers();
     };
 
@@ -27,6 +33,7 @@ const WhiteList = ({ provider, whtList, account }) => {
 
         const transaction = await whtList.connect(signer).removeFromWhtList(userNumberInt);
         await transaction.wait();
+        await pose.connect(signer).initializeQuorum();
         displayWhiteListedUsers();
     };
 
@@ -53,6 +60,12 @@ const WhiteList = ({ provider, whtList, account }) => {
     return (
         <div className='padding-fromNav text-center'>
             <p><strong>White List</strong></p>
+
+            {/* Toggle Button */}
+            <Button onClick={toggleVisibility} variant="primary" size="lg">
+                {showNonWhitelisted ? "Hide Non-Whitelisted Users" : "Show All Users"}
+            </Button>
+
             <Table striped bordered hover responsive variant="dark">
                 <thead>
                     <tr>
@@ -63,16 +76,19 @@ const WhiteList = ({ provider, whtList, account }) => {
                     </tr>
                 </thead>
                 <tbody>
-                    {_usersOnWhtList.map((info, index) => (
-                        <tr key={index}>
-                            <td>{info.userNumber.toString()}</td>
-                            <td>{info.nameForAddress}</td>
-                            <td>{info.userAddress}</td>
-                            <td>{info.isListed.toString()}</td>
-                        </tr>
-                    ))}
+                    {_usersOnWhtList
+                        .filter((info) => showNonWhitelisted || info.isListed) // Toggle logic
+                        .map((info, index) => (
+                            <tr key={index}>
+                                <td>{info.userNumber.toString()}</td>
+                                <td>{info.nameForAddress}</td>
+                                <td>{info.userAddress}</td>
+                                <td>{info.isListed.toString()}</td>
+                            </tr>
+                        ))}
                 </tbody>
             </Table>
+
             <div className="px-5 py-3 container">
                 <p><strong>Add User to White List</strong></p>
                 <Form.Control onChange={(e) => setUserAddress(e.target.value)} size="lg" required type="text" placeholder="Type or paste user address here" />
@@ -80,6 +96,7 @@ const WhiteList = ({ provider, whtList, account }) => {
                 <Button onClick={addUserToWhiteList} variant="primary" size="lg">
                     Add to White List
                 </Button>
+
                 <p><strong>Remove User from White List</strong></p>
                 <Form.Control onChange={(e) => setUserNumber(e.target.value)} size="lg" required type="number" placeholder="Type or paste user number here" />
                 <Button onClick={removeUserFromWhiteList} variant="primary" size="lg">

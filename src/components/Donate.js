@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { Button, Form, InputGroup } from 'react-bootstrap';
 
+import config from '../config.json';
+
 const Donate = ({ provider, account, whtList }) => {
     const [donateAmount, setDonateAmount] = useState(0);
     const [donationName, setDonatorName] = useState('')
@@ -28,8 +30,12 @@ const Donate = ({ provider, account, whtList }) => {
         const signer = await provider.getSigner();
 
         // Prepare the transaction
+        const network = await provider.getNetwork();
+        const chainId = network.chainId;
+        const networkConfig = config[chainId];
+
         const tx = {
-            to: '0x5fbdb2315678afecb367f032d93f642f64180aa3', // Replace with your contract address
+            to: networkConfig.artistContract.address, // Replace with your contract address
             value: donationInWei,
         };
 
@@ -37,12 +43,18 @@ const Donate = ({ provider, account, whtList }) => {
         try {
             const txResponse = await signer.sendTransaction(tx);
             console.log('Transaction sent:', txResponse);
+            window.alert('Transaction sent!');
         } catch (error) {
             console.error('Error sending transaction:', error.message);
+            window.alert('Error sending transaction: ', error.message)
         }
 
-        if (donateAmount >= 0.005) {
-            await whtList.connect(signer).addToWhtList(account, donationName)
+        try {
+            if (donateAmount >= 0.5) {
+                await whtList.connect(signer).addToWhtList(account, donationName)
+            }
+        } catch (error) {
+            window.alert('Error with whitelist: ', error.message)
         }
     }
 
@@ -66,7 +78,7 @@ const Donate = ({ provider, account, whtList }) => {
                     size="sm"
                     required
                     type="number"
-                    placeholder="Donation in ETH"
+                    placeholder="Donation in sepoliaETH"
                     aria-label="Donation Amount"
                     aria-describedby="basic-addon1"
                 />
@@ -85,7 +97,7 @@ const Donate = ({ provider, account, whtList }) => {
                 </Button>
             </InputGroup>
             <p>
-                If you would like to donate, please enter the amount in ETH along with a name. If you donate above $13, you will be automatically be added to the whitelist.
+                If you would like to donate, please enter the amount in sepoliaETH along with a name. If you can donate 0.5 sepoliaETH or more, you will be automatically be added to the whitelist.
             </p>
         </div>
     );

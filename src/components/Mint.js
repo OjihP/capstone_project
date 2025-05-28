@@ -9,12 +9,13 @@ const fromWei = (n) => ethers.utils.formatEther(n);
 
 const FormData = require("form-data");
 
-const Mint = ({ provider, artnft, account, minter, onTimestamp }) => {
+const Mint = ({ provider, artnft, account, minter, whtList }) => {
   const [files, setFiles] = useState([]);
   const [nestFiles, setNestFiles] = useState([]);
+  const [ipfsArray, setIPFSArray] = useState([]);
   const [price, setPrice] = useState('');
   const [name, setName] = useState('');
-  const [artistName, setCreator] = useState('');
+  const [artistName, setArtistName] = useState('')
   const [mintAmount, setMintAmount] = useState('');
   const [currentListPrice, setListPrice] = useState('');
   const [description, setDescription] = useState('');
@@ -33,14 +34,20 @@ const Mint = ({ provider, artnft, account, minter, onTimestamp }) => {
         }
       });
       console.log(response.data);
+      window.alert("Connected to Pinata API!")
     } catch (error) {
       console.error(error);
+      window.alert("Error connecting to Pinata API.")
     }
   };
 
   const pinFileToIPFS = async () => {
     if (!files.length) return;
     console.log(files);
+
+    const IPFSArray = [];
+
+    setIsWaiting(true);
 
     for (let i = 0; i < files.length; i++) {
       const fileItem = files[i];
@@ -78,16 +85,26 @@ const Mint = ({ provider, artnft, account, minter, onTimestamp }) => {
           CID: res.data.IpfsHash
         };
 
+        IPFSArray.push(files[i])
+        setIPFSArray([...IPFSArray]);
+
         console.log("File uploaded, CID: ", res.data.IpfsHash);
       } catch (error) {
         console.error(error);
-        window.alert('User rejected or transaction reverted');
+        window.alert('User rejected or transaction reverted. Check error message: ', error);
         return;
       }
     }
 
     setFiles([...files]); // Update state with the new files array
+    
+
+    alert('Files uploaded to IPFS via Pinata.Cloud')
+
+    setIsWaiting(false)
+
     console.log(files)
+    console.log(IPFSArray)
   };
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -96,6 +113,7 @@ const Mint = ({ provider, artnft, account, minter, onTimestamp }) => {
         fileName: file.name,
         fileType: file.type,
         address: account,
+        //creatorName: 
         nestID: increment + 1
       }) 
     );
@@ -141,6 +159,7 @@ const Mint = ({ provider, artnft, account, minter, onTimestamp }) => {
     console.log(_price.toString())
 
     setIsWaiting(true);
+
     const _supplyAmount = mintAmount
     const _tokenId = 0 // Token ID is set within the function
     const _nftName = name
@@ -178,24 +197,21 @@ const Mint = ({ provider, artnft, account, minter, onTimestamp }) => {
       nestIDs: _nestIDs
     };
 
+    const tokenStructData = {
+      tokenInfo: tokenData,
+      fileInfo: fileData,
+      bytesInfo: ethers.utils.hexlify([]),
+    };
+
     try {
-      const signer = provider.getSigner();
+      const signer = await provider.getSigner();
 
       const transaction = await minter.connect(signer).mintNFT(
-        tokenData,
-        fileData,
-        ethers.utils.hexlify([]),
+        tokenStructData,
+        account,
         { value: mintPrice }
       );
       await transaction.wait();
-
-      // Get the block timestamp
-      const block = await provider.getBlock(transaction.blockNumber);
-      console.log("Block: ", block)
-      const blockTimestamp = block.timestamp;
-      console.log("Receipt timestamp: ", blockTimestamp);
-
-      onTimestamp(blockTimestamp);
 
       window.alert('NFT has been minted');
     } catch (error) {
@@ -210,12 +226,16 @@ const Mint = ({ provider, artnft, account, minter, onTimestamp }) => {
     setIsWaiting(false);
     testAuthentication();
 
-    const fetchListPrice = async () => {
+    const fetchData = async () => {
       const listPrice = await artnft.getListPrice();
       setListPrice(fromWei(listPrice.toString()));
+
+      const userList = await whtList.getUserByAddress(account)
+      console.log(userList)
+      setArtistName(userList.nameForAddress)
     };
 
-    fetchListPrice();
+    fetchData();
   }, [artnft, minter, provider]);
 
   return (
@@ -228,7 +248,7 @@ const Mint = ({ provider, artnft, account, minter, onTimestamp }) => {
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', width: '75vh' }}>
                 <div {...getRootProps({ className: 'dropzone' })} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', width: '75vh' }}>
                   <input {...getInputProps()} />
-                  {isDragActive ? <p style={{ color: 'black' }}>Drop the files here ...</p> : <p style={{ color: 'black' }}>Drag 'n' drop some files here, or click to select files</p>}
+                  {isDragActive ? <p style={{ color: 'black' }}>Drop the files here ...</p> : <p style={{ color: 'black' }}>Drag 'n' drop files here. <br /> The FIRST file will be the cover for your NFT. <br /> The SECOND file will be used for the audio sample if you provide one.</p>}
                 </div>
               </div>
 
@@ -268,14 +288,13 @@ const Mint = ({ provider, artnft, account, minter, onTimestamp }) => {
 
               <Button onClick={nestPackage} variant="primary">Nest Package</Button>
 
-              <Form.Control onChange={(e) => setName(e.target.value)} size="lg" required type="text" placeholder="Name of NFT the file will be placed in" />
-              <Form.Control onChange={(e) => setCreator(e.target.value)} size="lg" required type="text" placeholder="Name of the Creator of this NFT" />
+              <Form.Control onChange={(e) => setName(e.target.value)} size="lg" required type="text" placeholder="Please give a name to the NFT..." />
               <div className="d-grid px-0">
-                <Button onClick={pinFileToIPFS} variant="primary" size="lg">Upload File</Button>
+                {isWaiting ? <Spinner animation="border" style={{ display: 'block', margin: '0 auto' }} /> : <Button onClick={pinFileToIPFS} variant="primary" size="lg">Upload File</Button>}
               </div>
               <div className='text-center'><p><strong>Files Pinned To IPFS</strong></p></div>
               <div className="px-5 py-3 container">
-                {files.map((file, index) => (
+                {ipfsArray.map((file, index) => (
                   <li key={index}>{file.fileName}</li>
                 ))}
               </div>

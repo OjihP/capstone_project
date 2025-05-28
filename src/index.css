@@ -7,7 +7,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 
   background-image: url('../src/NuWav_crop.png');
-  background-size: 1550px 730px;
+  background-size: 2000px 999px;
   background-position: center;
   background-attachment: fixed; /* Make background fixed */
   /*height: 100vh; /* Full height */

@@ -4,30 +4,19 @@
       "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
     },
     "artistWhiteList": {
-      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
-    },
-    "proposalsContract": {
       "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
     },
-    "artistMinter": {
+    "proposalsContract": {
       "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
     },
-    "events": {
-      "address": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
-    }
-  },
-  "11155111": {
-    "artistContract": {
-      "address": "0x135d3bB9C5825656e615Fc0B0dEa2652934f0674"
-    },
-    "artistWhiteList": {
-      "address": "0x83345B948E3091c98e974b7E975D3B9475FCD0F3"
-    },
-    "proposalsContract": {
-      "address": "0x93a3952EB472c7e226a204d7C5B54FD74F60E2D6"
-    },
     "artistMinter": {
-      "address": "0x0D1E75e2C2bD08b341344C6dF16E73e52CC6A936"
+      "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"
+    },
+    "events": {
+      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+    },
+    "nftListing": {
+      "address": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
     }
   }
 }

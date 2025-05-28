@@ -1,5 +1,5 @@
 import { HashRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Container, Offcanvas, Table, Spinner } from 'react-bootstrap';
 import { ethers } from 'ethers';
 
@@ -23,6 +23,7 @@ import WHTLIST_ABI from '../abis/ArtistWhiteList.json';
 import POSE_ABI from '../abis/Proposals.json';
 import MINT_ABI from '../abis/ArtistMinter.json';
 import EVENT_ABI from '../abis/Events.json';
+import LISTING_ABI from '../abis/NFTListing.json'
 
 // Config
 import config from '../config.json';
@@ -41,11 +42,14 @@ function App() {
   const [pose, setProposals] = useState(null);
   const [minter, setMinter] = useState(null);
   const [contractEvents, setContractEvents] = useState(null);
-  const [balance, setBalance] = useState(0);
+  const [listings, setListings] = useState(null);
+  const [balances, setBalances] = useState([]);
   const [_fileItemArray, setFileItemArray] = useState([]);
   const [show, setShow] = useState(false);
   const [events, setEvents] = useState([]);
+  const [ whtListEvent, setWhtListEvent] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isWhitelisted, setIsWhitelisted] = useState(false);
 
   const [blockTimestamp, setBlockTimestamp] = useState(null);
   const handleTimestamp = (timestamp) => {
@@ -89,126 +93,121 @@ function App() {
       const events = new ethers.Contract(networkConfig.events.address, EVENT_ABI, provider);
       setContractEvents(events);
 
+      const listings = new ethers.Contract(networkConfig.nftListing.address, LISTING_ABI, provider);
+      setListings(listings);
+
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       const account = ethers.utils.getAddress(accounts[0]);
       setAccount(account);
       
       let balance = await provider.getBalance(account);
       balance = ethers.utils.formatUnits(balance, 18);
-      setBalance(balance);
+      //setBalance(balance);
 
       setIsLoading(false);
+
     } catch (error) {
-      console.error('Error in web3Handler:', error);
+      console.log('Error in web3Handler:', error);
+      window.alert('Error in web3Handler: ', error);
     }
   };
 
   const disconnectFromWeb3 = () => {
-    setProvider(null);
-    setArtNFT(null);
-    setWhtList(null);
-    setProposals(null);
-    setMinter(null);
-    setContractEvents(null);
-    setAccount(null);
-    setBalance(null);
+    try {
+      //setProvider(null);
+      //setArtNFT(null);
+      //setWhtList(null);
+      //setProposals(null);
+      //setMinter(null);
+      //setContractEvents(null);
+      setAccount(null);
+      //setBalance(null);
+      navigate('/home');
+
+    } catch (error) {
+      console.log('Error disconnecting account:', error);
+      window.alert('Error disconnecting account: ', error);
+    }
   };
 
-  const existingEventIds = new Set();
-  const eventDataArray = []
+  const getWhiteListedUsers = useCallback (async () => {
+    setIsWhitelisted(false);
+
+    if (!whtList || !account) {
+      return;
+    }
+
+    try {
+      const count = await whtList.getCurrentWhtListCounter();
+      console.log("Current whtList counter: ", count.toString())
+      const items = [];
+
+      for (let i = 0; i < count; i++) {
+        const userInfo = await whtList.getUserByNumber(i + 1);
+        console.log("User Info: ", userInfo)
+        items.push(userInfo);
+      }
+      console.log("'items' variable: ", items)
+
+      const isCurrentUserWhitelisted = await whtList.isWhitelisted(account)
+      console.log("whtList Status: ", isCurrentUserWhitelisted)
+
+      setIsWhitelisted(isCurrentUserWhitelisted);
+
+    } catch (error) {
+      console.error('Error fetching whitelist: ', error);
+      window.alert('Error fetching whitelist: ', error);
+    }
+  }, [provider, account, whtList])
 
   const eventListener = async () => {
-    if (artnft) {
-      contractEvents.on("TokenListedSuccess", (supplyAmount, tokenId, nftName, artistName, artistAddress, owner, seller, price, currentlyListed, timestamp) => {
-        const eventData = {
-          supplyAmount: supplyAmount.toString(),
-          tokenId: tokenId.toString(),
-          nftName,
-          artistName,
-          price: fromWei(price.toString()),
-          timestamp
-        };
+    try {
+      const count = await contractEvents.getCurrentTokenEventCounter()
+      console.log("Token Event Count: ", count.toString())
+      const events = [];
 
-        eventDataArray.push(eventData)
-        setEvents((prevEventData) => [...prevEventData, eventData])
-        //setEvents(eventDataArray)
+      for (let i = 0; i < count; i++) {
+        const eventData = await contractEvents.getTokenEvent(i + 1)
+        console.log("Event Data: ", eventData)
+        events.push(eventData)
+      }
+      console.log("Events Array: ", events)
 
-        console.log("Current Event Data: ", eventData)
-        console.log("Event Data Array: ", eventDataArray)
-        console.log("Events Array: ", events)
-      });
+      setEvents(events)
+
+    } catch (error) {
+      console.log('Error in Token Event Counter : ', error)
+      window.alert('Error in Token Event Counter : ', error)
+    }
+
+    try {
+      const count = await contractEvents.getCurrentWhtListEventCounter()
+      console.log("WhtList Count: ", count.toString())
+      const events = [];
+
+      for (let i = 0; i < count; i++) {
+        const eventData = await contractEvents.getWhtListEvent(i + 1)
+        console.log("Event Data: ", eventData)
+        events.push(eventData)
+      }
+      console.log("Events Array: ", events)
+
+      setWhtListEvent(events)
+
+    } catch (error) {
+      console.log('Error in White List Event Counter: ', error)
+      window.alert('Error in White List Event Counter: ', error)
     }
   }
 
-  const startListeningToEvents = () => {
-    if (artnft) {
-      artnft.on("TokenListedSuccess", (supplyAmount, tokenId, nftName, creator, CreatorAddress, owner, seller, price, fileNames, fileTypes, tokenCIDS, currentlyListed, timestamp, log) => {
-        const eventData = {
-          supplyAmount: supplyAmount.toString(),
-          tokenId: tokenId.toString(),
-          nftName,
-          creator,
-          CreatorAddress,
-          price: fromWei(price.toString()),
-          blockTimestamp: timestamp ? timestamp.toNumber() : null,
-        };
-
-        /*console.log("Log details: ", log);
-
-        console.log("existingEventIds: ", existingEventIds)
-
-        if (!existingEventIds.has(log.logIndex)) {
-          existingEventIds.add(log.logIndex);
-          setEvents((prevEvents) => [...prevEvents, eventData]);
-          console.log("Most recent event: ", eventData);
-        }*/
-      });
-    }
-  };
-
-  const fetchPastEvents = async () => {
-    if (artnft) {
-      try {
-        const latestBlock = await provider.getBlockNumber();
-        const pastEvents = await artnft.queryFilter('TokenListedSuccess', latestBlock, 0, latestBlock);
-
-        console.log("Lastest Block: ", latestBlock)
-        console.log("Past Events: ", pastEvents)
-
-        pastEvents.forEach((log) => {
-          const parsedLog = artnft.interface.parseLog(log);
-          const supplyAmount = parsedLog.args[0];
-          const tokenId = parsedLog.args[1];
-          const nftName = parsedLog.args[2];
-          const creator = parsedLog.args[3];
-          const price = parsedLog.args[7];
-          const timestamp = parsedLog.args[11];
-
-          const eventData = {
-            supplyAmount: supplyAmount.toString(),
-            tokenId: tokenId.toString(),
-            nftName,
-            creator,
-            price: fromWei(price.toString()),
-            blockTimestamp: timestamp ? timestamp.toNumber() : null,
-          };
-
-          /*if (!existingEventIds.has(log.logIndex)) {
-            existingEventIds.add(log.logIndex);
-            setEvents((prevEvents) => [...prevEvents, eventData]);
-            console.log("Event Data: ", eventData);
-          }*/
-        });
-      } catch (error) {
-        console.error("Error querying or processing past events: ", error);
-      }
-    }
-  };
-
   const listenToEvent = async () => {
-    //await fetchPastEvents();
-    //startListeningToEvents();
-    eventListener();
+    try {
+      eventListener();
+    } catch (error) {
+      console.log("Error listening to events: ", error)
+      window.alert("Error in listening to events.")
+    }
+    
   };
   
   useEffect(() => {
@@ -217,21 +216,16 @@ function App() {
     }
   }, [isLoading]);
   
-  useEffect(() => {
+  /*useEffect(() => {
     if (!account) {
       console.error("No account detected, navigating to home.");
       navigate('/home');
     }
-  }, [account, navigate]);
+  }, [account, navigate]);*/
 
   useEffect(() => {
-    /*if (artnft) {
-      startListeningToEvents();
-      return () => {
-        artnft.off("TokenListedSuccess");
-      };
-    }*/
-  }, [artnft]);
+    getWhiteListedUsers();
+  }, [account]);
 
   return (
     <Container style={{ color: '#fff' }}>
@@ -251,18 +245,18 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/donate" element={<Donate provider={provider} artnft={artnft} whtList={whtList} account={account} />} />
-        <Route path="/nftshop" element={<NFTShop provider={provider} artnft={artnft} account={account} minter={minter} />} />
-        <Route path="/myNFTs" element={<MyNFTs provider={provider} artnft={artnft} minter={minter} account={account} fileItemArray={_fileItemArray} />} />
-        <Route path="/mint" element={<Mint provider={provider} artnft={artnft} account={account} minter={minter} whtList={whtList} setFileItemArray={setFileItemArray} onTimestamp={handleTimestamp} />} />
+        <Route path="/nftshop" element={<NFTShop provider={provider} artnft={artnft} listings={listings} account={account} minter={minter} />} />
+        <Route path="/myNFTs" element={<MyNFTs provider={provider} artnft={artnft} minter={minter} listings={listings} account={account} fileItemArray={_fileItemArray} />} />
+        <Route path="/mint" element={<Mint provider={provider} artnft={artnft} account={account} minter={minter} whtList={whtList} />} />
         <Route path="/whiteList" element={<WhiteList provider={provider} artnft={artnft} whtList={whtList} pose={pose} account={account} />} />
         <Route path="/funds" element={<Funds provider={provider} artnft={artnft} minter={minter} whtList={whtList} pose={pose} account={account} />} />
-        <Route path="/manageNFTs" element={<ManageNFTs provider={provider} artnft={artnft} minter={minter} account={account} fileItemArray={_fileItemArray} />} />
-        <Route path="/admin" element={<Admin provider={provider} artnft={artnft} minter={minter} whtList={whtList} pose={pose} account={account} />} />
+        <Route path="/manageNFTs" element={<ManageNFTs provider={provider} artnft={artnft} listings={listings} minter={minter} account={account} fileItemArray={_fileItemArray} />} />
+        <Route path="/admin" element={<Admin provider={provider} artnft={artnft} minter={minter} whtList={whtList} pose={pose} listings={listings} account={account} />} />
       </Routes>
 
       <Offcanvas className="w-50" show={show} onHide={handleClose} placement="end">
         <Offcanvas.Header closeButton>
-          <Offcanvas.Title>Event Listener</Offcanvas.Title>
+          <Offcanvas.Title><strong>Event Listener</strong></Offcanvas.Title>
         </Offcanvas.Header>
         <Offcanvas.Body>
           {isLoading ? (
@@ -271,6 +265,7 @@ function App() {
             </div>
           ) : (
             <Table striped bordered hover>
+              <thead><th><strong>NFT LISTENER</strong></th></thead>
               <thead>
                 <tr>
                   <th>Timestamp</th>
@@ -279,27 +274,66 @@ function App() {
                   <th>NFT Creator</th>
                   <th>Price</th>
                   <th>Supply Amount</th>
+                  <th>NFT Status</th>
                 </tr>
               </thead>
               <tbody>
                 {events.map((event, index) => (
                   <tr key={index}>
-                    <td>{new Date(event.timestamp * 1000).toLocaleString('en-US', {
-                      year: 'numeric', 
-                      month: 'numeric', 
-                      day: 'numeric', 
-                      hour: 'numeric', 
-                      minute: 'numeric', 
-                      second: 'numeric',
-                      timeZoneName: 'short', 
-                      hour12: true
-                    })} GMT{new Date(event.timestamp * 1000).getTimezoneOffset() / -60}
+                    <td>
+                      {new Date(event.timestamp * 1000).toLocaleString('en-US', {
+                        year: 'numeric', 
+                        month: 'numeric', 
+                        day: 'numeric', 
+                        hour: 'numeric', 
+                        minute: 'numeric', 
+                        second: 'numeric',
+                        timeZoneName: 'short',
+                        hour12: true
+                      })}<br />{new Date(event.timestamp * 1000).getTimezoneOffset() / -60} GMT
                     </td>
                     <td>{event.tokenId.toString()}</td>
                     <td>{event.nftName}</td>
                     <td>{event.artistName}</td>
-                    <td>{event.price.toString()} ETH</td>
+                    <td>{fromWei(event.price.toString())} ETH</td>
                     <td>{event.supplyAmount.toString()}</td>
+                    <td>{event.currentlyListed ? "In Stock" : "Sold Out"}</td>
+                    <td>{console.log("Status: ", event.currentlyListed)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+          {isLoading === false && isWhitelisted && (
+            <Table striped bordered hover>
+              <thead><th><strong>WHITELIST LISTENER</strong></th></thead>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>User ID</th>
+                  <th>Username</th>
+                  <th>User Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {whtListEvent.map((event, index) => (
+                  <tr key={index}>
+                    <td>
+                      {new Date(event.timestamp * 1000).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: 'numeric',
+                        second: 'numeric',
+                        timeZoneName: 'short',
+                        hour12: true
+                      })} GMT {new Date(event.timestamp * 1000).getTimezoneOffset() / -60}
+                    </td>
+                    <td>{event.userNumber.toString()}</td>
+                    <td>{event.nameForAddress}</td>
+                    <td>{event.isListed ? "Listed" : "Not Listed"}</td>
+                    <td>{console.log("Status: ", event.isListed)}</td>
                   </tr>
                 ))}
               </tbody>
